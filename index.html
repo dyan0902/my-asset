@@ -404,11 +404,10 @@
 </div>
 
 <script>
-  // ============================================================
-  // 1. 보안 설정: 본인만의 비밀번호
-  const MY_PASSWORD = "ditlzhdw1"; 
+  // 1. 보안 설정: 접속 시 암호
+  const MY_PASSWORD = "비밀번호1234"; 
 
-  // 2. 파이어베이스 설정
+  // 2. Firebase 설정
   const firebaseConfig = {
     apiKey: "AIzaSyATpDddpWHvYTTLnKVq62Dp0ft4SPQhf7E",
     authDomain: "asset-c8259.firebaseapp.com",
@@ -420,7 +419,6 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  // ============================================================
 
   const inputPass = prompt("접속 비밀번호를 입력하세요:");
   if (inputPass !== MY_PASSWORD) {
@@ -449,27 +447,31 @@
     document.getElementById('view-home').classList.remove('hidden');
   };
 
+  // 💡 핵심 패치: 파이어베이스에서 가져온 뒤 무조건 날짜순으로 줄 세우기!
   async function initFirebaseData() {
     const cols = ["Accounts", "Transactions", "Dividends", "MonthlyGoals", "RealizedPL", "CurrentPrices"];
     for(let c of cols) {
       const snap = await db.collection(c).get();
-      rawStore[c] = snap.docs.map(doc => doc.data());
+      let docs = snap.docs.map(doc => doc.data());
+      
+      // 날짜를 기준으로 과거부터 현재 순으로 깔끔하게 정렬
+      if (["Transactions", "Dividends", "RealizedPL", "MonthlyGoals"].includes(c)) {
+        docs.sort((a, b) => {
+          let dateA = new Date(a["날짜"] || "1970-01-01").getTime();
+          let dateB = new Date(b["날짜"] || "1970-01-01").getTime();
+          if (dateA === dateB) return Number(a["ID"] || 0) - Number(b["ID"] || 0);
+          return dateA - dateB;
+        });
+      }
+      rawStore[c] = docs;
     }
-    const profiles = (rawStore.Accounts || []).map(p => ({ 
-      id: p["ID"] || p["ID "], 
-      name: p["프로필명"] || p["프로필명 "], 
-      color: p["색상"] || p["색상 "] 
-    }));
+    const profiles = (rawStore.Accounts || []).map(p => ({ id: p["ID"], name: p["프로필명"], color: p["색상"] }));
     renderProfileSelection(profiles);
     renderDropdownProfiles(profiles);
   }
 
-  // 띄어쓰기 오류까지 무시하고 데이터를 뽑아주는 무적의 어댑터
   function getAccountFullDataLocal(profileName) {
-    const toArray = (arr, mapKeys) => (arr||[]).map(obj => mapKeys.map(k => {
-      const safeKey = Object.keys(obj).find(key => key.trim() === k.trim());
-      return safeKey && obj[safeKey] !== undefined ? obj[safeKey] : '';
-    }));
+    const toArray = (arr, mapKeys) => (arr||[]).map(obj => mapKeys.map(k => obj[k] !== undefined ? obj[k] : ''));
     
     const transData = toArray(rawStore.Transactions, ["ID", "계좌명", "날짜", "구분", "자산유형", "종목명", "단가", "수량", "금액", "비고"]);
     const divData = toArray(rawStore.Dividends, ["ID", "계좌명", "날짜", "종목명", "배당금", "보유수량", "주당배당금"]);
@@ -477,17 +479,15 @@
     const goalData = toArray(rawStore.MonthlyGoals, ["ID", "계좌명", "유형", "항목명", "금액", "비고"]);
     const priceData = toArray(rawStore.CurrentPrices, ["계좌명", "종목명", "티커", "현재가", "수정일"]);
 
-    // 이름의 공백으로 인한 버그 완벽 차단
-    const pn = String(profileName).trim();
-    const profileTrans = transData.filter(r => String(r[1]).trim() === pn);
-    const profileDivs = divData.filter(r => String(r[1]).trim() === pn);
-    const profileReals = realData.filter(r => String(r[1]).trim() === pn);
-    const profileGoals = goalData.filter(r => String(r[1]).trim() === pn);
+    const profileTrans = transData.filter(r => r[1] === profileName);
+    const profileDivs = divData.filter(r => r[1] === profileName);
+    const profileReals = realData.filter(r => r[1] === profileName);
+    const profileGoals = goalData.filter(r => r[1] === profileName);
 
     const holdings = {};
     let totalDeposit = 0, cashBalance = 0; 
     profileTrans.forEach(r => {
-      const type = String(r[3]).trim(), cat = r[4], symbol = r[5], qty = Number(r[7]) || 0, amount = Number(r[8]) || 0;
+      const type = r[3], cat = r[4], symbol = r[5], qty = Number(r[7]) || 0, amount = Number(r[8]) || 0;
       if (type === '입금') { totalDeposit += amount; cashBalance += amount; }
       else if (type === '매수') {
         if (!holdings[symbol]) holdings[symbol] = { asset: cat, symbol, qty: 0, totalCost: 0, avgPrice: 0 };
@@ -509,12 +509,12 @@
 
     let realizedProfitTotal = 0;
     profileReals.forEach(r => { 
-      const amt = (String(r[4]).trim() === '수익' ? Number(r[5]) : -Number(r[5]));
+      const amt = (r[4] === '수익' ? Number(r[5]) : -Number(r[5]));
       realizedProfitTotal += amt;
     });
 
     const priceMap = {};
-    priceData.forEach(row => { if (String(row[0]).trim() === pn) priceMap[row[1]] = { ticker: String(row[2]), price: row[3] }; });
+    priceData.forEach(row => { if (row[0] === profileName) priceMap[row[1]] = { ticker: row[2], price: row[3] }; });
 
     let stockEvalTotal = 0, stockCostTotal = 0; 
     const finalHoldings = Object.values(holdings).filter(h => (h.qty || 0) > 0).map(h => {
@@ -529,10 +529,8 @@
     const unrealizedProfit = stockEvalTotal - stockCostTotal;
     const unrealizedRate = stockCostTotal > 0 ? (unrealizedProfit / stockCostTotal * 100) : 0;
 
-    const fd = (r) => { let d = new Date(r[2]); r[2] = isNaN(d) ? r[2] : d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0'); return r; };
-
     return {
-      transactions: profileTrans.map(fd), dividends: profileDivs.map(fd), realizedPLs: profileReals.map(fd),
+      transactions: profileTrans, dividends: profileDivs, realizedPLs: profileReals,
       holdings: finalHoldings, goals: profileGoals, monthlyDivs: monthlyDivs,
       summary: { evaluationAmount, realizedProfit: realizedProfitTotal, dividendTotal, totalDeposit, cashBalance, unrealizedProfit, unrealizedRate }
     };
@@ -545,12 +543,12 @@
 
   function renderProfileSelection(profiles) {
     const list = document.getElementById('profile-list');
-    list.innerHTML = profiles.map(p => `<div class="profile-card-home" onclick="selectProfile('${p.name}', '${p.color}')"><div class="profile-box" style="background:${p.color}">${p.name ? p.name[0] : '?'}</div><div style="font-weight:700; font-size:18px; color:var(--text);">${p.name}</div></div>`).join('') + `<div class="profile-card-home" onclick="addNewProfilePrompt()"><div class="profile-box" style="background:#edf2f7; border:2px dashed #cbd5e0; color:#aaa;">+</div><div style="color:#aaa;">추가</div></div>`;
+    list.innerHTML = profiles.map(p => `<div class="profile-card-home" onclick="selectProfile('${p.name}', '${p.color}')"><div class="profile-box" style="background:${p.color}">${p.name[0]}</div><div style="font-weight:700; font-size:18px; color:var(--text);">${p.name}</div></div>`).join('') + `<div class="profile-card-home" onclick="addNewProfilePrompt()"><div class="profile-box" style="background:#edf2f7; border:2px dashed #cbd5e0; color:#aaa;">+</div><div style="color:#aaa;">추가</div></div>`;
   }
 
   function renderDropdownProfiles(profiles) {
     const list = document.getElementById('dropdown-profile-list');
-    list.innerHTML = profiles.map(p => `<div class="dropdown-item" style="display:flex; align-items:center; gap:10px;" onclick="selectProfile('${p.name}', '${p.color}')"><div style="width:24px; height:24px; border-radius:4px; background:${p.color}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">${p.name ? p.name[0] : '?'}</div><div style="font-weight:500;">${p.name}</div></div>`).join('');
+    list.innerHTML = profiles.map(p => `<div class="dropdown-item" style="display:flex; align-items:center; gap:10px;" onclick="selectProfile('${p.name}', '${p.color}')"><div style="width:24px; height:24px; border-radius:4px; background:${p.color}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">${p.name[0]}</div><div style="font-weight:500;">${p.name}</div></div>`).join('');
   }
 
   function selectProfile(name, color) {
@@ -563,9 +561,7 @@
   function viewAllAccounts() {
     switchPage('all-accounts');
     const list = document.getElementById('all-accounts-list');
-    
-    // Account 이름 찾기 (공백 무시)
-    let profiles = (rawStore.Accounts||[]).map(r => r["프로필명"] || r["프로필명 "]);
+    let profiles = (rawStore.Accounts||[]).map(r => r["프로필명"]);
     let res = profiles.map(pName => {
       const accData = getAccountFullDataLocal(pName);
       return { name: pName, summary: accData.summary, holdings: accData.holdings };
@@ -630,6 +626,7 @@
     }).join('');
     
     const rStart = pageState.realized * itemsPerPage;
+    // 최신 날짜가 위로 오도록 뒤집기 (reverse)
     const rPaginated = currentData.realizedPLs.slice().reverse().slice(rStart, rStart + itemsPerPage);
     document.getElementById('realized-body').innerHTML = rPaginated.map(r => `<tr><td>${r[2]}</td><td class="sticky-col" style="font-weight:700">${r[3]}</td><td class="${r[4]==='수익'?'up':'down'}">${r[4]}</td><td>${Math.round(Number(r[5])).toLocaleString()}원</td><td>${act(r[0], '실현손익')}</td></tr>`).join('');
     renderPagination('realized-pagination', 'realized', currentData.realizedPLs.length);
@@ -672,12 +669,12 @@
   }
 
   function renderRecords() {
-    const tradeData = currentData.transactions.filter(r => String(r[3]).trim() !== '입금').reverse();
+    const tradeData = currentData.transactions.filter(r => String(r[3]) !== '입금').slice().reverse();
     const tStart = pageState.trade * itemsPerPage;
     document.getElementById('trade-body').innerHTML = tradeData.slice(tStart, tStart+itemsPerPage).map(r => `<tr><td>${r[2]}</td><td class="${r[3]==='매수'?'up':'down'}">${r[3]}</td><td>${r[4]}</td><td class="sticky-col">${r[5]}</td><td>${Number(r[6]).toLocaleString()}</td><td>${r[7]}</td><td>${Number(r[8]).toLocaleString()}</td><td>${act(r[0], '거래')}</td></tr>`).join('');
     renderPagination('trade-pagination', 'trade', tradeData.length);
     
-    const depositData = currentData.transactions.filter(r => String(r[3]).trim() === '입금').reverse();
+    const depositData = currentData.transactions.filter(r => String(r[3]) === '입금').slice().reverse();
     const depStart = pageState.deposit * itemsPerPage;
     document.getElementById('deposit-body').innerHTML = depositData.slice(depStart, depStart+itemsPerPage).map(r => `<tr><td>${r[2]}</td><td>${r[4]}</td><td style="font-weight:700;">${Number(r[8]).toLocaleString()}원</td><td>${r[5]}</td><td>${act(r[0], '입금')}</td></tr>`).join('');
     renderPagination('deposit-pagination', 'deposit', depositData.length);
@@ -691,7 +688,7 @@
   function renderAssetGoals() {
     let sumSalary = 0, sumFixed = 0, sumSaving = 0, sumInvest = 0;
     currentData.goals.forEach(g => {
-      const type = String(g[2]).trim(), amt = Number(g[4]) || 0;
+      const type = g[2], amt = Number(g[4]) || 0;
       if (type === '월급') sumSalary += amt; else if (type === '고정지출') sumFixed += amt; else if (type === '적금') sumSaving += amt; else if (type === '투자') sumInvest += amt;
     });
     const sumSpare = sumSalary - sumFixed - sumSaving - sumInvest;
@@ -758,7 +755,7 @@
     if (tab === 'dividend') { selectedDivYear = new Date().getFullYear().toString(); pageState.divDetail = 0; renderDivSummary(); renderRecords(); }
   }
 
-  // --- Firebase 쓰기 로직 ---
+  // --- Firebase 쓰기/수정/삭제 로직 ---
   function openRealizedModal() { document.getElementById('realized-modal').style.display = 'flex'; }
   function closeRealizedModal() { editingId = null; document.getElementById('realized-modal').style.display = 'none'; document.getElementById('rl-symbol').value = ''; document.getElementById('rl-amount').value = ''; }
   
@@ -766,11 +763,8 @@
     showLoading();
     const docId = editingId || new Date().getTime().toString();
     const data = { "ID": docId, "계좌명": currentProfile, "날짜": new Date().toISOString().substring(0,10), "종목명": document.getElementById('rl-symbol').value, "구분": document.getElementById('rl-type').value, "금액": Number(document.getElementById('rl-amount').value) };
-    
     const q = await db.collection("RealizedPL").where("ID", "==", docId).get();
-    if (!q.empty) await db.collection("RealizedPL").doc(q.docs[0].id).update(data);
-    else await db.collection("RealizedPL").add(data);
-    
+    if (!q.empty) await db.collection("RealizedPL").doc(q.docs[0].id).update(data); else await db.collection("RealizedPL").add(data);
     closeRealizedModal(); await refreshData();
   }
 
@@ -788,10 +782,8 @@
 
   function editRec(id, type) {
     editingId = id; editingType = type;
-    const body = document.getElementById('edit-modal-body');
-    document.getElementById('edit-modal-title').innerText = type + ' 수정';
+    const body = document.getElementById('edit-modal-body'); document.getElementById('edit-modal-title').innerText = type + ' 수정';
     let html = '';
-
     if (type === '거래') {
       const r = currentData.transactions.find(x => x[0].toString() === id.toString());
       html = `<input type="date" id="em-date" class="input-box" value="${r[2]}"><select id="em-type" class="input-box"><option value="매수" ${r[3]==='매수'?'selected':''}>매수</option><option value="매도" ${r[3]==='매도'?'selected':''}>매도</option></select><select id="em-asset" class="input-box"><option value="해외주식" ${r[4]==='해외주식'?'selected':''}>해외주식</option><option value="국내주식" ${r[4]==='국내주식'?'selected':''}>국내주식</option><option value="채권" ${r[4]==='채권'?'selected':''}>채권</option><option value="RP" ${r[4]==='RP'?'selected':''}>RP</option><option value="현금" ${r[4]==='현금'?'selected':''}>현금</option><option value="금" ${r[4]==='금'?'selected':''}>금</option><option value="리츠" ${r[4]==='리츠'?'selected':''}>리츠</option><option value="기타" ${r[4]==='기타'?'selected':''}>기타</option></select><input type="text" id="em-symbol" class="input-box" value="${r[5]}" placeholder="종목명"><input type="number" id="em-price" class="input-box" value="${r[6]}" placeholder="단가"><input type="number" id="em-qty" class="input-box" value="${r[7]}" placeholder="수량">`;
@@ -926,3 +918,4 @@
 </script>
 </body>
 </html>
+
