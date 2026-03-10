@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>자산배분 마스터 (Firebase)</title>
+  <title>자산배분 마스터</title>
+  <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   
@@ -10,50 +11,161 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
+    /* 사용자님의 오리지널 CSS 완벽 복구 */
     :root { --primary: #2883D7; --point-red: #EE5D50; --bg: #f5f7fb; --card: #ffffff; --text: #1a202c; --text-sub: #718096; --border: #e2e8f0; --up: #e53e3e; --down: #3182ce; --dark-box: #1a1b1e; }
     body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; overflow-x: hidden; }
     .hidden { display: none !important; }
+
     nav { background: #fff; border-bottom: 1px solid var(--border); position: sticky; top:0; z-index:1000; width: 100%; }
     .nav-content { max-width: 1200px; margin: 0 auto; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
     .nav-title { font-size: 20px; font-weight: 900; cursor: pointer; color: var(--text); }
     #nav-avatar { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; cursor: pointer; }
+    
+    .dropdown-menu { position: absolute; top: 55px; right: 0; background: #fff; border: 1px solid var(--border); border-radius: 8px; width: 180px; z-index: 2000; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 8px 0; }
+    .dropdown-item { padding: 12px 20px; font-size: 14px; cursor: pointer; color: var(--text); }
+    .dropdown-item:hover { background: #f7fafc; color: var(--primary); }
+    .dropdown-divider { border-top: 1px solid var(--border); margin: 6px 0; }
+
     #view-home { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #fff; }
     .profile-container { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; max-width: 900px; }
     .profile-card-home { text-align: center; cursor: pointer; width: 150px; }
-    .profile-box { width: 120px; height: 120px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 45px; color: #fff; margin: 0 auto 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .profile-box { width: 120px; height: 120px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 45px; color: #fff; margin: 0 auto 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.2s; }
+
     .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; box-sizing: border-box; }
     .summary-card { background: #fff; border-radius: 16px; padding: 35px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 30px; }
-    .record-card { background: #fff; border-radius: 16px; padding: 25px; border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 25px; }
+    .record-card { background: #fff !important; border-radius: 16px; padding: 25px; border: 1px solid var(--border) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important; margin-bottom: 25px !important; }
+
+    .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .btn-detail-icon { background: #f1f5f9; border: 1px solid var(--border); width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .btn-icon { width: 32px; height: 32px; border: none; background: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; }
+    .btn-icon svg { width: 18px; height: 18px; fill: #a0aec0; }
+    .btn-record { height: 48px; border-radius: 10px; border: none; color: white !important; font-weight: 700; cursor: pointer; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 14px; width: 100%; }
+
+    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .dash-footer-row { display: flex; align-items: center; border-top: 1px solid var(--border); padding-top: 25px; }
+    .dash-sub-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; flex: 1; }
+    .sub-info-item { font-size: 13px; color: var(--text-sub); }
+    .sub-info-item b { display: block; font-size: 18px; color: var(--text); margin-top: 5px; }
+
     .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-    .tab-bar { display: flex; gap: 30px; border-bottom: 2px solid var(--border); margin-bottom: 30px; }
-    .tab-btn { padding: 15px 5px; cursor: pointer; font-weight: 700; color: var(--text-sub); position: relative; font-size: 16px; }
+
+    .tab-bar { display: flex; gap: 30px; border-bottom: 2px solid var(--border); margin-bottom: 30px; align-items: flex-end; position: relative; }
+    .tab-btn { padding: 15px 5px; cursor: pointer; font-weight: 700; color: var(--text-sub); position: relative; font-size: 16px; transition: 0.2s; }
     .tab-btn.active { color: var(--primary); }
     .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: var(--primary); }
-    .summary-banner { background: var(--dark-box); color: white; border-radius: 16px; padding: 25px 20px; display: flex; justify-content: space-around; align-items: center; margin-bottom: 30px; }
-    .banner-item { flex: 1; text-align: center; }
-    .banner-item h4 { margin: 0; font-size: 12px; opacity: 0.7; }
-    .banner-item p { margin: 5px 0 0; font-size: 20px; font-weight: 900; }
+    .btn-go-dash { margin-left: auto; cursor: pointer; color: var(--text-sub); font-size: 14px; padding-bottom: 15px; }
+
+    .summary-banner { background: var(--dark-box); color: white; border-radius: 16px; padding: 25px 20px; display: flex; justify-content: space-around; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .banner-item { flex: 1; text-align: center; position: relative; }
+    .banner-item:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 15%; height: 70%; width: 1px; background: rgba(255,255,255,0.15); }
+    .banner-item h4 { margin: 0 0 5px; font-size: 12px; opacity: 0.7; font-weight: 400; }
+    .banner-item p { margin: 0; font-size: 20px; font-weight: 900; }
+    .banner-item.clickable { cursor: pointer; }
+
+    #monthly-div-sum-table { table-layout: fixed; width: 100%; border-collapse: collapse; margin-top: 10px; }
+    #monthly-div-sum-table th, #monthly-div-sum-table td { text-align: center !important; width: 8.33%; padding: 12px 2px; border: 1px solid var(--border); font-size: 12px; }
+
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 25px 0 10px; }
+    .page-btn { min-width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; color: var(--text-sub); transition: 0.2s; }
+    .page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: #f7fafc; }
+    .page-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
+    .page-btn.arrow { font-weight: 900; color: var(--primary); font-size: 16px; }
+
+    .all-accounts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+    .acc-card { background: white; border-radius: 16px; border: 1px solid var(--border); padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+    .mini-asset-bar { height: 16px; background: #edf2f7; border-radius: 8px; display: flex; overflow: hidden; margin-bottom: 20px; cursor: help; }
+    
+    .custom-tooltip { position: absolute; background: rgba(26, 27, 30, 0.95); color: white; padding: 12px; border-radius: 8px; font-size: 12px; z-index: 10000; display: none; pointer-events: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); min-width: 170px; max-width: 250px; white-space: normal; line-height: 1.6; }
+    .tooltip-title { border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 6px; margin-bottom: 6px; font-weight: bold; color: var(--primary); }
+    .tooltip-item { display: flex; justify-content: space-between; gap: 15px; }
+
     .month-badge-container { display: flex; flex-wrap: wrap; gap: 4px; }
     .month-badge { display: inline-block; padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 10px; color: var(--text-sub); min-width: 28px; text-align: center; }
-    .month-badge.active { background: var(--primary); color: white; border-color: var(--primary); }
-    .table-container { background-color: #fff; border-radius: 8px; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-    th { background: #f7fafc; padding: 15px; text-align: left; color: var(--text-sub); font-size: 13px; }
-    td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-    .up { color: var(--up); font-weight: bold; } .down { color: var(--down); font-weight: bold; }
-    .input-box { height: 48px; width: 100%; padding: 0 15px; border: 1px solid #cbd5e0; border-radius: 10px; box-sizing: border-box; margin-bottom: 12px; }
-    .btn-record { height: 48px; border-radius: 10px; border: none; color: white; font-weight: 700; cursor: pointer; background: var(--primary); width: 100%; }
-    .dropdown-menu { position: absolute; top: 55px; right: 0; background: #fff; border: 1px solid var(--border); border-radius: 8px; width: 180px; z-index: 2000; display: none; }
-    @media (max-width: 600px) { .dashboard-grid { grid-template-columns: 1fr; } .summary-banner { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; } }
+    .month-badge.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
+
+    .table-container { background-color: #fff; border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+    table { width: 100%; border-collapse: collapse; background-color: #fff; white-space: nowrap; }
+    th { background: #f7fafc; padding: 15px; text-align: left; color: var(--text-sub); font-size: 13px; border-bottom: 1px solid var(--border); }
+    td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: var(--text); }
+    .up { color: var(--up) !important; font-weight: bold; } .down { color: var(--down) !important; font-weight: bold; }
+
+    .sticky-col { position: sticky; left: 0; z-index: 2; border-right: 1px solid #edf2f7; }
+    th.sticky-col { background-color: #f7fafc !important; z-index: 3; }
+    td.sticky-col { background-color: #ffffff !important; }
+    .sticky-col::after { content: ''; position: absolute; top: 0; bottom: 0; right: -5px; width: 5px; background: linear-gradient(to right, rgba(0,0,0,0.04), transparent); pointer-events: none; }
+
+    .input-box { height: 48px; width: 100%; padding: 0 15px; border: 1px solid #cbd5e0; border-radius: 10px; box-sizing: border-box; font-size: 14px; outline: none; margin-bottom: 12px; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .modal-content { background: #fff; padding: 30px; border-radius: 16px; width: 450px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+
+    /* 모바일 전용 최적화 */
+    @media (max-width: 600px) {
+      .nav-title { font-size: 18px; }
+      h3 { font-size: 16px !important; margin-bottom: 12px !important; }
+      .summary-card { padding: 20px !important; }
+      .record-card { padding: 15px !important; }
+      .acc-card { padding: 15px !important; }
+      .dashboard-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+      #dash-total-amount { font-size: 30px !important; letter-spacing: -1px; }
+      #dash-profit-tag { font-size: 16px !important; }
+      .dash-sub-info { gap: 10px !important; }
+      .sub-info-item { font-size: 11px !important; }
+      .sub-info-item b { font-size: 14px !important; margin-top: 2px !important; }
+
+      .all-accounts-grid { grid-template-columns: 1fr !important; }
+      .acc-eval-val { font-size: 20px !important; margin-bottom: 10px !important; }
+      .profile-container { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
+      .modal-content { width: 90%; padding: 20px; }
+
+      .card-header-flex { flex-direction: column; align-items: stretch !important; gap: 10px; }
+      .card-header-flex button { width: 100%; padding: 12px 0 !important; font-size: 14px; }
+
+      .tab-bar { flex-wrap: wrap; gap: 10px; border-bottom: none; }
+      .tab-btn { font-size: 14px; padding: 8px 5px; }
+      .btn-go-dash { width: 100%; text-align: left; padding: 10px 5px; border-top: 1px solid var(--border); margin-top: 5px; font-size: 13px; }
+
+      .summary-banner { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; padding: 20px !important; }
+      .banner-item::after { display: none !important; } 
+      .banner-item { padding: 0 !important; }
+      .banner-item h4 { font-size: 11px !important; }
+      .banner-item p { font-size: 16px !important; }
+      #b-eval-profit { font-size: 11px !important; }
+      
+      .banner-item:nth-child(1) { order: 1; }
+      .banner-item:nth-child(4) { order: 2; }
+      .banner-item:nth-child(2) { order: 3; }
+      .banner-item:nth-child(3) { order: 4; }
+
+      .goal-banner-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; }
+      .goal-banner-grid .banner-item::after { display: none !important; }
+
+      .mobile-stack { grid-template-columns: 1fr !important; gap: 10px !important; }
+      .btn-record { height: 44px; font-size: 14px; margin-top: 5px; }
+
+      th, td { padding: 8px 8px; font-size: 12px; }
+      #monthly-div-sum-table { min-width: 500px; }
+
+      .pagination { flex-wrap: wrap; gap: 5px; }
+      .page-btn { min-width: 32px; height: 32px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
 
-<div id="loading-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; display:flex; justify-content:center; align-items:center; font-weight:bold; color:var(--primary);">
-  데이터 동기화 중...
+<svg style="display: none;">
+  <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+</svg>
+
+<div id="tooltip-box" class="custom-tooltip"></div>
+
+<div id="loading-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:99999; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; color:var(--primary);">
+  DB를 불러오는 중입니다...
 </div>
 
-<div id="view-home">
+<div id="view-home" class="hidden">
   <h1 style="margin-bottom: 40px; font-weight: 900;">누가 이용 중인가요?</h1>
   <div class="profile-container" id="profile-list"></div>
 </div>
@@ -61,31 +173,62 @@
 <div id="view-app" class="hidden">
   <nav>
     <div class="nav-content">
-      <div id="current-profile-name" class="nav-title" onclick="location.reload()"></div>
+      <div id="current-profile-name" class="nav-title" onclick="handleTitleClick()"></div>
       <div class="nav-right" style="position:relative">
-        <div id="nav-avatar" onclick="toggleDropdown()"></div>
-        <div id="profile-dropdown" class="dropdown-menu">
-           <div style="padding:15px; cursor:pointer;" onclick="location.reload()">🏠 홈으로</div>
+        <div id="nav-avatar-wrap" style="display:flex; align-items:center; cursor:pointer;" onclick="toggleDropdown(event)">
+          <div id="nav-avatar"></div>
+          <div style="font-size:12px; color:var(--text-sub); margin-left: 8px; margin-right: 15px;">▼</div>
+        </div>
+        <div id="profile-dropdown" class="dropdown-menu hidden">
+          <div id="dropdown-profile-list"></div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" onclick="viewAllAccounts()">📊 계좌 모아보기</div>
+          <div class="dropdown-item" onclick="goHome()">🏠 사용자 선택 (Home)</div>
+          <div class="dropdown-item" onclick="addNewProfilePrompt()">➕ 새 계좌 추가</div>
         </div>
       </div>
     </div>
   </nav>
 
   <div class="container">
+    <div id="page-all-accounts" class="hidden">
+      <h2 style="margin-bottom:20px; font-weight:900;">전체 계좌 모아보기</h2>
+      <div class="all-accounts-grid" id="all-accounts-list"></div>
+    </div>
+
     <div id="page-dashboard">
       <div class="summary-card">
-        <div style="color:var(--text-sub); font-size:14px; margin-bottom:10px;">총 평가자산</div>
-        <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom:25px;">
-          <div id="dash-total-amount" style="font-size: 42px; font-weight: 900;">0원</div>
-          <div id="dash-profit-tag" style="font-size: 20px; font-weight: 700;">(+0원 0%)</div>
-        </div>
-        <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 25px;">
-          <div style="display: flex; gap: 30px;">
-            <div>총 입금 <b id="dash-sub-deposit">0원</b></div>
-            <div>배당금 <b id="dash-sub-dividend">0원</b></div>
-            <div>실현손익 <b id="dash-sub-realized">0원</b></div>
+        <div class="dash-header" style="display:block; margin-bottom: 25px;">
+          <div style="color:var(--text-sub); font-size:14px; margin-bottom:10px;">총 평가자산 (RP 제외)</div>
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+            <div id="dash-total-amount" style="font-size: 42px; font-weight: 900; line-height:1; letter-spacing:-1px;">0원</div>
+            <div id="dash-profit-tag" style="font-size: 22px; font-weight: 700;">(+0원 +0.0%)</div>
           </div>
-          <button onclick="switchPage('detail')" style="background:#f1f5f9; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold;">상세보기</button>
+        </div>
+
+        <div class="dash-footer-row">
+          <div class="dash-sub-info">
+            <div class="sub-info-item">총 입금액<b id="dash-sub-deposit">0원</b></div>
+            <div class="sub-info-item">총 배당금<b id="dash-sub-dividend">0원</b></div>
+            <div class="sub-info-item">실현 손익<b id="dash-sub-realized">0원</b></div>
+          </div>
+          <button onclick="switchPage('detail')" class="btn-detail-icon"><svg><use href="#icon-chevron-right"/></svg></button>
+        </div>
+      </div>
+      
+      <div class="dashboard-grid">
+        <div class="record-card">
+          <h3>자산 구성 비중</h3>
+          <div id="dash-asset-bar" class="mini-asset-bar"></div>
+          <div class="table-container">
+            <table id="dash-asset-table"><thead><tr><th>유형</th><th>금액</th><th>비중</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+        <div class="record-card">
+          <h3 id="detail-title">종목 상세 비중</h3>
+          <div class="table-container">
+            <table id="dash-stock-table"><thead><tr><th>종목명</th><th>금액</th><th>비중</th></tr></thead><tbody></tbody></table>
+          </div>
         </div>
       </div>
     </div>
@@ -94,20 +237,32 @@
       <div class="tab-bar">
         <div class="tab-btn active" onclick="changeTab('holdings', this)">보유현황</div>
         <div class="tab-btn" onclick="changeTab('trade', this)">거래기록</div>
+        <div class="tab-btn" onclick="changeTab('deposit', this)">입금기록</div>
         <div class="tab-btn" onclick="changeTab('dividend', this)">배당기록</div>
-        <div style="margin-left:auto; cursor:pointer; color:var(--text-sub);" onclick="switchPage('dashboard')">대시보드로</div>
+        <div class="tab-btn" onclick="changeTab('assets', this)">자산관리</div>
+        <div class="btn-go-dash" onclick="switchPage('dashboard')">▤ 대시보드 보기</div>
       </div>
 
       <div id="tab-holdings">
         <div class="summary-banner">
-          <div class="banner-item"><h4>평가금</h4><p id="b-evaluation">0원</p></div>
-          <div class="banner-item"><h4>실현손익</h4><p id="b-realized">0원</p></div>
+          <div class="banner-item">
+            <h4>평가금 (RP제외)</h4>
+            <p id="b-evaluation">0원</p>
+            <div id="b-eval-profit" style="font-size: 13px; font-weight: 700; margin-top: 6px;">(+0원 0.0%)</div>
+          </div>
+          <div class="banner-item clickable" onclick="openRealizedModal()"><h4>실현 손익</h4><p id="b-realized">0원</p></div>
           <div class="banner-item"><h4>배당금</h4><p id="b-dividend">0원</p></div>
+          <div class="banner-item"><h4>총 입금액</h4><p id="b-deposit">0원</p></div>
         </div>
+        
         <div class="record-card">
-          <div class="table-container">
-            <table id="holdings-table">
-              <thead><tr><th>유형</th><th>종목명</th><th>수량</th><th>단가</th><th>현재가</th><th>평가손익</th></tr></thead>
+          <div class="card-header-flex">
+            <h3 style="margin:0;">실시간 보유 현황</h3>
+            <button onclick="syncPrices()" style="background:#4a5568; color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold;">현재가 업데이트 🔄</button>
+          </div>
+          <div class="table-container" style="margin-top:0;">
+            <table>
+              <thead><tr><th>자산유형</th><th class="sticky-col">종목명</th><th>티커</th><th>수량</th><th>평균단가</th><th>현재가</th><th>현재금액</th><th>평가손익</th></tr></thead>
               <tbody id="holdings-body"></tbody>
             </table>
           </div>
@@ -116,50 +271,150 @@
         <div class="record-card">
           <h3>실현 손익 기록 DB</h3>
           <div class="table-container">
-            <table>
-              <thead><tr><th>날짜</th><th>종목명</th><th>구분</th><th>금액</th></tr></thead>
-              <tbody id="realized-body"></tbody>
-            </table>
+            <table><thead><tr><th>날짜</th><th class="sticky-col">종목명</th><th>구분</th><th>금액</th><th>관리</th></tr></thead><tbody id="realized-body"></tbody></table>
           </div>
+          <div id="realized-pagination" class="pagination"></div>
         </div>
       </div>
 
-      <div id="tab-trade" class="hidden">
-         <div class="record-card">
-           <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 100px; gap:10px;">
-             <input type="date" id="t-date" class="input-box">
-             <select id="t-type" class="input-box"><option value="매수">매수</option><option value="매도">매도</option><option value="입금">입금</option></select>
-             <input type="text" id="t-symbol" class="input-box" placeholder="종목명">
-             <input type="number" id="t-amount" class="input-box" placeholder="금액">
-             <button onclick="saveTransaction()" class="btn-record">저장</button>
-           </div>
-         </div>
-      </div>
-      
       <div id="tab-dividend" class="hidden">
-         <div class="record-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-               <h3>종목별 누적 배당금</h3>
-               <select id="div-year-select" class="input-box" style="width:100px; margin-bottom:0;" onchange="renderDividend()"></select>
-            </div>
-            <div class="table-container">
-               <table>
-                  <thead><tr><th>종목명</th><th>누적 금액</th><th>배당 현황/횟수</th></tr></thead>
-                  <tbody id="dividend-body"></tbody>
-               </table>
-            </div>
-         </div>
+        <div class="record-card">
+          <h3>
+            월별 배당금 합계 
+            <select id="div-year-select" class="input-box" style="width:auto; display:inline-block; height:32px; padding:0 10px; margin-left:10px; font-size:14px; margin-bottom:0;" onchange="divYearChanged(this.value)"></select>
+          </h3>
+          <div class="table-container" style="margin-top:10px;">
+            <table id="monthly-div-sum-table">
+              <thead><tr><th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th><th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th></tr></thead>
+              <tbody id="monthly-div-sum-body"></tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="record-card">
+          <h3>종목별 누적 배당금
+            <select id="div-year-select-2" class="input-box" style="width:auto; display:inline-block; height:32px; padding:0 10px; margin-left:10px; font-size:14px; margin-bottom:0;" onchange="divYearChanged(this.value)"></select>
+          </h3>
+          <div class="table-container">
+            <table>
+              <thead><tr><th class="sticky-col">종목명</th><th>해당 연도 누적 배당금</th><th>월별 배당현황 (해당 연도)</th></tr></thead>
+              <tbody id="div-summary-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="record-card" style="padding-bottom:15px; margin-bottom:15px; box-shadow:none; border:none;">
+          <h3>배당 기록 DB (전체 기간)</h3>
+          <div class="mobile-stack" style="display:grid; grid-template-columns: 1.2fr 1.2fr 1fr 1fr 120px; gap:10px; margin-top:15px;">
+            <input type="date" id="dv-date" class="input-box"><input type="text" id="dv-symbol" class="input-box" placeholder="종목명"><input type="number" id="dv-amount" class="input-box" placeholder="총 배당금"><input type="number" id="dv-qty" class="input-box" placeholder="보유수량"><button onclick="saveData('dividend')" class="btn-record" style="background:#EE5D50">기록하기</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>날짜</th><th class="sticky-col">종목명</th><th>배당금</th><th>보유수량</th><th>1주당</th><th>관리</th></tr></thead>
+            <tbody id="dividend-body"></tbody>
+          </table>
+        </div>
+        <div id="div-detail-pagination" class="pagination"></div>
       </div>
 
+      <div id="tab-trade" class="hidden">
+        <div class="record-card">
+          <div class="mobile-stack" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-bottom:15px;">
+            <input type="date" id="t-date" class="input-box">
+            <select id="t-type" class="input-box"><option value="매수">매수</option><option value="매도">매도</option></select>
+            <select id="t-asset" class="input-box">
+              <option value="해외주식">해외주식</option><option value="국내주식">국내주식</option><option value="채권">채권</option><option value="RP">RP</option><option value="금">금</option><option value="리츠">리츠</option><option value="현금">현금</option><option value="기타">기타</option>
+            </select>
+          </div>
+          <div class="mobile-stack" style="display:grid; grid-template-columns: 2fr 1fr 1fr 120px; gap:15px;">
+            <input type="text" id="t-symbol" class="input-box" placeholder="종목명"><input type="number" id="t-price" class="input-box" placeholder="단가"><input type="number" id="t-qty" class="input-box" placeholder="수량"><button onclick="saveData('trade')" class="btn-record">기록하기</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table><thead><tr><th>날짜</th><th>구분</th><th>자산</th><th class="sticky-col">종목명</th><th>단가</th><th>수량</th><th>총액</th><th>관리</th></tr></thead><tbody id="trade-body"></tbody></table>
+        </div>
+        <div id="trade-pagination" class="pagination"></div>
+      </div>
+
+      <div id="tab-deposit" class="hidden">
+        <div class="record-card">
+          <div class="mobile-stack" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-bottom:15px;">
+            <input type="date" id="d-date" class="input-box"><select id="d-type" class="input-box"><option value="여유금">여유금</option><option value="월급">월급</option><option value="기타">기타</option></select><input type="number" id="d-amount" class="input-box" placeholder="금액">
+          </div>
+          <div class="mobile-stack" style="display:grid; grid-template-columns: 1fr 120px; gap:15px;">
+            <input type="text" id="d-note" class="input-box" placeholder="비고"><button onclick="saveData('deposit')" class="btn-record" style="background:var(--point-red)">기록하기</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table><thead><tr><th>날짜</th><th>유형</th><th>금액</th><th>비고</th><th>관리</th></tr></thead><tbody id="deposit-body"></tbody></table>
+        </div>
+        <div id="deposit-pagination" class="pagination"></div>
+      </div>
+
+      <div id="tab-assets" class="hidden">
+        <div class="summary-banner" style="display: block !important;">
+          <div class="goal-banner-grid" style="display: flex; justify-content: space-around; text-align: center; width: 100%;">
+            <div class="banner-item" style="flex:1;"><h4>월급</h4><p id="ag-sum-salary">0원</p></div>
+            <div class="banner-item" style="flex:1;"><h4>고정지출</h4><p id="ag-sum-fixed">0원</p></div>
+            <div class="banner-item" style="flex:1;"><h4>적금</h4><p id="ag-sum-saving">0원</p></div>
+            <div class="banner-item" style="flex:1; border-right:none;"><h4>투자비용</h4><p id="ag-sum-invest">0원</p></div>
+          </div>
+          <div style="border-top: 1px solid rgba(255,255,255,0.15); margin-top: 20px; padding-top: 15px; text-align: right;">
+            <span style="font-size:14px; opacity:0.8; margin-right:10px;">여유금</span>
+            <strong id="ag-sum-spare" style="font-size:24px; color:#14C3C6;">0원</strong>
+          </div>
+        </div>
+
+        <div class="record-card">
+          <div class="mobile-stack" style="display:grid; grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr 120px; gap:12px;">
+            <select id="ag-type" class="input-box"><option value="월급">월급</option><option value="고정지출">고정지출</option><option value="유동지출">유동지출</option><option value="적금">적금</option><option value="투자">투자</option></select>
+            <input type="text" id="ag-item" class="input-box" placeholder="항목명">
+            <input type="number" id="ag-amount" class="input-box" placeholder="금액">
+            <input type="text" id="ag-note" class="input-box" placeholder="비고">
+            <button onclick="saveData('asset-goal')" class="btn-record">기록하기</button>
+          </div>
+        </div>
+        
+        <div class="record-card">
+          <h3>자산 목표 관리 DB</h3>
+          <div class="table-container">
+            <table><thead><tr><th>유형</th><th class="sticky-col">항목명</th><th>금액</th><th>비고</th><th>관리</th></tr></thead><tbody id="asset-goal-body"></tbody></table>
+          </div>
+          <div id="asset-pagination" class="pagination"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="realized-modal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>실현 손익 기록</h3>
+    <input type="text" id="rl-symbol" class="input-box" placeholder="종목명">
+    <select id="rl-type" class="input-box"><option value="수익">수익 (+)</option><option value="손실">손실 (-)</option></select>
+    <input type="number" id="rl-amount" class="input-box" placeholder="금액">
+    <div style="display:flex; gap:10px; margin-top:20px;"><button style="flex:1; height:48px; border-radius:10px; border:none; background:#f1f5f9;" onclick="closeRealizedModal()">취소</button><button style="flex:1; height:48px; border-radius:10px; border:none; background:var(--primary); color:#fff;" onclick="submitRealized()">저장</button></div>
+  </div>
+</div>
+
+<div id="edit-modal" class="modal-overlay">
+  <div class="modal-content">
+    <h3 id="edit-modal-title">수정하기</h3>
+    <div id="edit-modal-body" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;"></div>
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button style="flex:1; height:48px; border-radius:10px; border:none; background:#f1f5f9;" onclick="closeEditModal()">취소</button>
+      <button style="flex:1; height:48px; border-radius:10px; border:none; background:var(--primary); color:#fff;" onclick="submitEdit()">수정 완료</button>
     </div>
   </div>
 </div>
 
 <script>
-  // 1. 보안 설정: 접속 시 암호
-  const MY_PASSWORD = "ditlzhdw1"; // <--- 원하는 비번으로 수정하세요!
+  // ============================================================
+  // 1. 보안 설정: 접속 시 암호 (원하는 비밀번호로 바꾸세요)
+  const MY_PASSWORD = "ditlzhdw1"; 
 
-  // 2. Firebase 설정 (사용자님의 정보를 그대로 넣었습니다)
+  // 2. Firebase 설정 정보
   const firebaseConfig = {
     apiKey: "AIzaSyATpDddpWHvYTTLnKVq62Dp0ft4SPQhf7E",
     authDomain: "asset-c8259.firebaseapp.com",
@@ -169,157 +424,509 @@
     appId: "1:123001838654:web:6ba8d1f382c4ad6853c56f"
   };
 
+  // Firebase 초기화
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  // ============================================================
 
-  // 암호 확인
   const inputPass = prompt("접속 비밀번호를 입력하세요:");
   if (inputPass !== MY_PASSWORD) {
     alert("비밀번호가 틀렸습니다.");
-    document.body.innerHTML = "<h1>접근 권한이 없습니다.</h1>";
+    document.body.innerHTML = "<h1 style='text-align:center; margin-top:100px;'>접근 권한이 없습니다.</h1>";
     window.stop();
   }
 
   let currentProfile = "";
-  let dataStore = { Accounts: [], Transactions: [], Dividends: [], RealizedPL: [] };
+  let currentData = { holdings: [], summary: {}, transactions: [], dividends: [], realizedPLs: [], goals: [], monthlyDivs: [] };
+  let rawStore = {}; // 파이어베이스 원본 데이터 임시 저장소
+  let editingId = null; let editingType = ''; 
+  const itemsPerPage = 10;
+  const pageState = { trade: 0, deposit: 0, divDetail: 0, asset: 0, realized: 0 }; 
+  const assetColors = { '해외주식': '#2883D7', '국내주식': '#14C3C6', '채권': '#00C092', 'RP': '#ED8936', '금': '#F6C24D', '배당': '#F98F77', '리츠': '#EE5D50', '현금': '#7961F2', '기타': '#A0AEC0' };
+  const profileColors = ['#E50914', '#2883D7', '#00C092', '#F6C24D', '#8E44AD', '#E67E22', '#16A085', '#D35400', '#2C3E50', '#E91E63'];
+  let selectedDivYear = new Date().getFullYear().toString();
 
-  window.onload = async () => {
-    await refreshData();
-    document.getElementById('loading-overlay').style.display = 'none';
+  function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
+  function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+  window.onload = async () => { 
+    showLoading();
+    await initFirebaseData(); 
+    hideLoading();
+    document.getElementById('view-home').classList.remove('hidden');
   };
 
-  async function refreshData() {
-    const collections = ["Accounts", "Transactions", "Dividends", "RealizedPL"];
-    for (const col of collections) {
-      const snap = await db.collection(col).get();
-      dataStore[col] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  // [핵심] 파이어베이스 데이터를 통째로 불러와서 기존 구글 시트 배열 방식으로 변환하는 어댑터!
+  async function initFirebaseData() {
+    const cols = ["Accounts", "Transactions", "Dividends", "MonthlyGoals", "RealizedPL", "CurrentPrices"];
+    for(let c of cols) {
+      const snap = await db.collection(c).get();
+      rawStore[c] = snap.docs.map(doc => doc.data());
     }
-    renderHome();
-    if(currentProfile) { renderDashboard(); renderHoldings(); renderRealized(); renderDividend(); }
+    const profiles = (rawStore.Accounts || []).map(p => ({ id: p["ID"], name: p["프로필명"], color: p["색상"] }));
+    renderProfileSelection(profiles);
+    renderDropdownProfiles(profiles);
   }
 
-  function renderHome() {
+  function getAccountFullDataLocal(profileName) {
+    const toArray = (arr, mapKeys) => (arr||[]).map(obj => mapKeys.map(k => obj[k] !== undefined ? obj[k] : ''));
+    
+    // 파이어베이스 JSON -> 구글 시트 2D 배열로 매핑
+    const transData = toArray(rawStore.Transactions, ["ID", "계좌명", "날짜", "구분", "자산유형", "종목명", "단가", "수량", "금액", "비고"]);
+    const divData = toArray(rawStore.Dividends, ["ID", "계좌명", "날짜", "종목명", "배당금", "보유수량", "주당배당금"]);
+    const realData = toArray(rawStore.RealizedPL, ["ID", "계좌명", "날짜", "종목명", "구분", "금액"]);
+    const goalData = toArray(rawStore.MonthlyGoals, ["ID", "계좌명", "유형", "항목명", "금액", "비고"]);
+    const priceData = toArray(rawStore.CurrentPrices, ["계좌명", "종목명", "티커", "현재가", "수정일"]);
+
+    const profileTrans = transData.filter(r => r[1] === profileName);
+    const profileDivs = divData.filter(r => r[1] === profileName);
+    const profileReals = realData.filter(r => r[1] === profileName);
+    const profileGoals = goalData.filter(r => r[1] === profileName);
+
+    const holdings = {};
+    let totalDeposit = 0, cashBalance = 0; 
+    profileTrans.forEach(r => {
+      const type = r[3], cat = r[4], symbol = r[5], qty = Number(r[7]) || 0, amount = Number(r[8]) || 0;
+      if (type === '입금') { totalDeposit += amount; cashBalance += amount; }
+      else if (type === '매수') {
+        if (!holdings[symbol]) holdings[symbol] = { asset: cat, symbol, qty: 0, totalCost: 0, avgPrice: 0 };
+        holdings[symbol].totalCost += amount; holdings[symbol].qty += qty;
+        holdings[symbol].avgPrice = holdings[symbol].qty > 0 ? (holdings[symbol].totalCost / holdings[symbol].qty) : 0;
+        cashBalance -= amount; 
+      } else if (type === '매도' && holdings[symbol]) {
+        const avg = holdings[symbol].avgPrice || 0;
+        holdings[symbol].qty -= qty; holdings[symbol].totalCost = avg * holdings[symbol].qty;
+        cashBalance += amount;
+      }
+    });
+
+    let dividendTotal = 0; let monthlyDivs = Array(12).fill(0);
+    profileDivs.forEach(r => {
+      const amt = Number(r[4]) || 0; dividendTotal += amt; cashBalance += amt;
+      const d = new Date(r[2]); if (!isNaN(d)) monthlyDivs[d.getMonth()] += amt;
+    });
+
+    let realizedProfitTotal = 0;
+    profileReals.forEach(r => { 
+      const amt = (r[4] === '수익' ? Number(r[5]) : -Number(r[5]));
+      realizedProfitTotal += amt;
+    });
+
+    const priceMap = {};
+    priceData.forEach(row => { if (row[0] === profileName) priceMap[row[1]] = { ticker: row[2].toString(), price: row[3] }; });
+
+    let stockEvalTotal = 0, stockCostTotal = 0; 
+    const finalHoldings = Object.values(holdings).filter(h => (h.qty || 0) > 0).map(h => {
+      const info = priceMap[h.symbol] || { ticker: "", price: 0 };
+      h.ticker = info.ticker; 
+      if (h.asset === 'RP') h.currentPrice = h.avgPrice; 
+      else { h.currentPrice = Number(info.price) || 0; stockEvalTotal += (h.currentPrice * h.qty); stockCostTotal += h.totalCost; }
+      return h;
+    });
+
+    const evaluationAmount = stockEvalTotal + cashBalance; 
+    const unrealizedProfit = stockEvalTotal - stockCostTotal;
+    const unrealizedRate = stockCostTotal > 0 ? (unrealizedProfit / stockCostTotal * 100) : 0;
+
+    const fd = (r) => { let d = new Date(r[2]); r[2] = isNaN(d) ? r[2] : d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0'); return r; };
+
+    return {
+      transactions: profileTrans.map(fd), dividends: profileDivs.map(fd), realizedPLs: profileReals.map(fd),
+      holdings: finalHoldings, goals: profileGoals, monthlyDivs: monthlyDivs,
+      summary: { evaluationAmount, realizedProfit: realizedProfitTotal, dividendTotal, totalDeposit, cashBalance, unrealizedProfit, unrealizedRate }
+    };
+  }
+
+  // --- UI 로직 (사용자님의 기존 완벽한 코드 그대로 복사!) ---
+  document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown && !dropdown.classList.contains('hidden') && !e.target.closest('.nav-right')) dropdown.classList.add('hidden');
+  });
+
+  function renderProfileSelection(profiles) {
     const list = document.getElementById('profile-list');
-    list.innerHTML = dataStore.Accounts.map(p => `
-      <div class="profile-card-home" onclick="selectProfile('${p["프로필명"]}', '${p["색상"]}')">
-        <div class="profile-box" style="background:${p["색상"]}">${p["프로필명"][0]}</div>
-        <div style="font-weight:700; font-size:18px;">${p["프로필명"]}</div>
-      </div>
-    `).join('');
+    list.innerHTML = profiles.map(p => `<div class="profile-card-home" onclick="selectProfile('${p.name}', '${p.color}')"><div class="profile-box" style="background:${p.color}">${p.name[0]}</div><div style="font-weight:700; font-size:18px; color:var(--text);">${p.name}</div></div>`).join('') + `<div class="profile-card-home" onclick="addNewProfilePrompt()"><div class="profile-box" style="background:#edf2f7; border:2px dashed #cbd5e0; color:#aaa;">+</div><div style="color:#aaa;">추가</div></div>`;
+  }
+
+  function renderDropdownProfiles(profiles) {
+    const list = document.getElementById('dropdown-profile-list');
+    list.innerHTML = profiles.map(p => `<div class="dropdown-item" style="display:flex; align-items:center; gap:10px;" onclick="selectProfile('${p.name}', '${p.color}')"><div style="width:24px; height:24px; border-radius:4px; background:${p.color}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">${p.name[0]}</div><div style="font-weight:500;">${p.name}</div></div>`).join('');
   }
 
   function selectProfile(name, color) {
-    currentProfile = name;
-    document.getElementById('view-home').classList.add('hidden');
-    document.getElementById('view-app').classList.remove('hidden');
+    currentProfile = name; document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-app').classList.remove('hidden');
     document.getElementById('current-profile-name').innerText = name + "님의 자산 현황";
-    const avatar = document.getElementById('nav-avatar');
-    avatar.style.backgroundColor = color; avatar.innerText = name[0];
-    switchPage('dashboard');
+    const avatar = document.getElementById('nav-avatar'); avatar.style.backgroundColor = color; avatar.innerText = name[0];
+    switchPage('dashboard'); refreshData();
   }
 
-  function switchPage(page) {
-    document.getElementById('page-dashboard').classList.toggle('hidden', page !== 'dashboard');
-    document.getElementById('page-detail').classList.toggle('hidden', page !== 'detail');
-    if(page === 'dashboard') renderDashboard();
-  }
-
-  function changeTab(tab, btn) {
-    ['holdings', 'trade', 'dividend'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  }
-
-  function renderDashboard() {
-    // 자산 계산 로직 (기존 앱스크립트 로직을 JS로 구현)
-    const pTrans = dataStore.Transactions.filter(t => t["계좌명"] === currentProfile);
-    const pDivs = dataStore.Dividends.filter(d => d["계좌명"] === currentProfile);
-    const pReals = dataStore.RealizedPL.filter(r => r["계좌명"] === currentProfile);
-
-    let cash = 0, deposit = 0, divTotal = 0, realTotal = 0;
-    pTrans.forEach(t => {
-      const amt = Number(t["금액"]) || 0;
-      if(t["구분"] === '입금') { cash += amt; deposit += amt; }
-      else if(t["구분"] === '매수') cash -= amt;
-      else if(t["구분"] === '매도') cash += amt;
+  function viewAllAccounts() {
+    switchPage('all-accounts');
+    const list = document.getElementById('all-accounts-list');
+    let profiles = (rawStore.Accounts||[]).map(r => r["프로필명"]);
+    let res = profiles.map(pName => {
+      const accData = getAccountFullDataLocal(pName);
+      return { name: pName, summary: accData.summary, holdings: accData.holdings };
     });
-    pDivs.forEach(d => { divTotal += (Number(d["배당금"]) || 0); cash += (Number(d["배당금"]) || 0); });
-    pReals.forEach(r => { realTotal += (r["구분"] === '수익' ? Number(r["금액"]) : -Number(r["금액"])); });
-
-    document.getElementById('dash-total-amount').innerText = Math.round(cash).toLocaleString() + "원";
-    document.getElementById('dash-sub-deposit').innerText = Math.round(deposit).toLocaleString() + "원";
-    document.getElementById('dash-sub-dividend').innerText = Math.round(divTotal).toLocaleString() + "원";
-    document.getElementById('dash-sub-realized').innerText = Math.round(realTotal).toLocaleString() + "원";
-  }
-
-  function renderRealized() {
-    const pReals = dataStore.RealizedPL.filter(r => r["계좌명"] === currentProfile).reverse();
-    document.getElementById('realized-body').innerHTML = pReals.map(r => `
-      <tr>
-        <td>${r["날짜"]}</td>
-        <td style="font-weight:bold;">${r["종목명"]}</td>
-        <td class="${r["구분"]==='수익'?'up':'down'}">${r["구분"]}</td>
-        <td>${Number(r["금액"]).toLocaleString()}원</td>
-      </tr>
-    `).join('');
-  }
-
-  function renderDividend() {
-    const yearSelect = document.getElementById('div-year-select');
-    const pDivs = dataStore.Dividends.filter(d => d["계좌명"] === currentProfile);
     
-    const years = [...new Set(pDivs.map(d => d["날짜"].substring(0,4)))].sort().reverse();
-    if(yearSelect.innerHTML === "") {
-      yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join('') || `<option value="${new Date().getFullYear()}">${new Date().getFullYear()}년</option>`;
-    }
-    
-    const selectedYear = yearSelect.value;
-    const filtered = pDivs.filter(d => d["날짜"].startsWith(selectedYear));
-    const summary = {};
-
-    filtered.forEach(d => {
-      if(!summary[d["종목명"]]) summary[d["종목명"]] = { total: 0, count: 0, months: Array(12).fill(false) };
-      summary[d["종목명"]].total += (Number(d["배당금"]) || 0);
-      summary[d["종목명"]].count += 1;
-      const m = parseInt(d["날짜"].substring(5,7)) - 1;
-      summary[d["종목명"]].months[m] = true;
-    });
-
-    document.getElementById('dividend-body').innerHTML = Object.entries(summary).map(([name, s]) => {
-      const badges = s.months.map((active, i) => `<span class="month-badge ${active?'active':''}">${i+1}월</span>`).join('');
-      return `<tr>
-        <td style="font-weight:bold;">${name}</td>
-        <td>${Math.round(s.total).toLocaleString()}원</td>
-        <td>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div class="month-badge-container">${badges}</div>
-            <b style="color:var(--primary);">연 ${s.count}회</b>
-          </div>
-        </td>
-      </tr>`;
+    if (!res || res.length === 0) { list.innerHTML = '<div style="text-align:center; padding: 50px; grid-column: 1 / -1;">등록된 계좌가 없습니다.</div>'; return; }
+    list.innerHTML = res.map(acc => {
+      const evalTotal = acc.summary.evaluationAmount || 1;
+      let assetBreakdown = { '현금': acc.summary.cashBalance };
+      acc.holdings.forEach(h => { if(h.asset !== 'RP') assetBreakdown[h.asset] = (assetBreakdown[h.asset] || 0) + (h.avgPrice * h.qty); });
+      const sortedAssets = Object.keys(assetBreakdown).filter(k => assetBreakdown[k] > 0).sort((a,b) => assetBreakdown[b] - assetBreakdown[a]);
+      const barHtml = sortedAssets.map(cat => {
+          const pct = (assetBreakdown[cat]/evalTotal*100).toFixed(1);
+          let tip = `<div class='tooltip-title'>${cat} 구성</div>`;
+          acc.holdings.filter(h => h.asset === cat).forEach(h => { tip += `<div class='tooltip-item'><span>${h.symbol}</span><span>${((h.avgPrice*h.qty)/assetBreakdown[cat]*100).toFixed(1)}%</span></div>`; });
+          return `<div style="width:${pct}%; background:${assetColors[cat]||'#cbd5e0'}" onmouseover="showTooltip(event, \`${tip}\`)" onmouseout="hideTooltip()"></div>`;
+      }).join('');
+      const assetListHtml = sortedAssets.map(cat => `<div style="display:flex; justify-content:space-between; font-size:13px; margin-top:8px;"><span><span style="color:${assetColors[cat]||'#cbd5e0'}">●</span> ${cat}</span><span style="font-weight:700;">${Math.round(assetBreakdown[cat]).toLocaleString()}원</span></div>`).join('');
+      return `<div class="acc-card" style="margin-bottom:25px;"><h2 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:15px;">${acc.name}</h2><div class="acc-eval-val" style="font-size:24px; font-weight:900; margin-bottom:15px;">${Math.round(evalTotal).toLocaleString()}원</div><div class="mini-asset-bar" style="margin-bottom:15px;">${barHtml}</div><div style="border-top:1px dashed #e2e8f0; padding-top:10px;">${assetListHtml}</div></div>`;
     }).join('');
   }
 
-  async function saveTransaction() {
-    const data = {
-      "계좌명": currentProfile,
-      "날짜": document.getElementById('t-date').value,
-      "구분": document.getElementById('t-type').value,
-      "종목명": document.getElementById('t-symbol').value,
-      "금액": Number(document.getElementById('t-amount').value),
-      "수량": 1,
-      "자산유형": "기타"
-    };
-    if(!data["날짜"] || !data["종목명"]) return alert("내용을 입력하세요.");
-    
-    await db.collection("Transactions").add(data);
-    alert("기록되었습니다.");
-    refreshData();
+  async function refreshData() {
+    showLoading();
+    await initFirebaseData();
+    currentData = getAccountFullDataLocal(currentProfile);
+    renderDashboard(); renderHoldings(); renderRecords(); renderAssetGoals(); renderDivSummary();
+    hideLoading();
   }
 
-  function toggleDropdown() {
-    const d = document.getElementById('profile-dropdown');
-    d.style.display = (d.style.display === 'block') ? 'none' : 'block';
+  function renderPagination(paginatorId, stateKey, totalItems) {
+    const paginator = document.getElementById(paginatorId); if(!paginator) return;
+    if(totalItems <= itemsPerPage) { paginator.innerHTML = ""; return; }
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startGroup = Math.floor(pageState[stateKey] / 10) * 10;
+    const endGroup = Math.min(startGroup + 10, totalPages);
+    let html = `<button class="page-btn arrow" onclick="moveGroup('${stateKey}', -1)" ${startGroup === 0 ? 'disabled' : ''}>&lt;</button>`;
+    for (let i = startGroup; i < endGroup; i++) { html += `<button class="page-btn ${pageState[stateKey] === i ? 'active' : ''}" onclick="setPage('${stateKey}', ${i})">${i + 1}</button>`; }
+    html += `<button class="page-btn arrow" onclick="moveGroup('${stateKey}', 1)" ${endGroup >= totalPages ? 'disabled' : ''}>&gt;</button>`;
+    paginator.innerHTML = html;
+  }
+  function setPage(key, page) { pageState[key] = page; renderHoldings(); renderRecords(); renderAssetGoals(); renderDivSummary(); }
+  function moveGroup(key, dir) { pageState[key] = (Math.floor(pageState[key] / 10) + dir) * 10; setPage(key, pageState[key]); }
+  const act = (id, type) => `<div style="display:flex; gap:8px; justify-content:flex-start;"><button class="btn-icon" onclick="editRec('${id}', '${type}')"><svg><use href="#icon-edit"/></svg></button><button class="btn-icon" onclick="del('${id}', '${type}')"><svg><use href="#icon-trash"/></svg></button></div>`;
+
+  function renderHoldings() {
+    const s = currentData.summary; 
+    document.getElementById('b-evaluation').innerText = Math.round(s.evaluationAmount).toLocaleString() + "원";
+    const profitTag = document.getElementById('b-eval-profit'); const sign = s.unrealizedProfit > 0 ? "+" : "";
+    profitTag.innerText = `(${sign}${Math.round(s.unrealizedProfit).toLocaleString()}원 ${sign}${s.unrealizedRate.toFixed(2)}%)`;
+    profitTag.style.color = s.unrealizedProfit >= 0 ? "var(--up)" : "var(--down)";
+    document.getElementById('b-realized').innerText = Math.round(s.realizedProfit).toLocaleString() + "원";
+    document.getElementById('b-dividend').innerText = Math.round(s.dividendTotal).toLocaleString() + "원";
+    document.getElementById('b-deposit').innerText = Math.round(s.totalDeposit).toLocaleString() + "원";
+    
+    document.getElementById('holdings-body').innerHTML = currentData.holdings.map(h => {
+      const cost = h.avgPrice * h.qty; const currentValue = h.currentPrice * h.qty; const profit = currentValue - cost;
+      let profitDisplay = `<span class="${profit>=0?'up':'down'}">${Math.round(profit).toLocaleString()} (${(cost>0?profit/cost*100:0).toFixed(1)}%)</span>`;
+      if(h.asset === 'RP') profitDisplay = `<span style="color:var(--text-sub); font-size:12px;">수익률 제외</span>`;
+      return `<tr><td>${h.asset}</td><td class="sticky-col" style="font-weight:700; color:#1a202c; cursor:pointer;" onclick="manualPricePrompt('${h.symbol}')">${h.symbol}</td><td><input type="text" style="width:70px; border:1px solid #ddd; text-align:center;" value="${h.ticker}" onchange="saveTicker('${h.symbol}', this.value)"></td><td>${h.qty.toLocaleString()}</td><td>${Math.round(h.avgPrice).toLocaleString()}</td><td style="font-weight:700;">${Math.round(h.currentPrice).toLocaleString()}원</td><td style="font-weight:700;">${Math.round(currentValue).toLocaleString()}원</td><td>${profitDisplay}</td></tr>`;
+    }).join('');
+    
+    const rStart = pageState.realized * itemsPerPage;
+    const rPaginated = currentData.realizedPLs.slice().reverse().slice(rStart, rStart + itemsPerPage);
+    document.getElementById('realized-body').innerHTML = rPaginated.map(r => `<tr><td>${r[2]}</td><td class="sticky-col" style="font-weight:700">${r[3]}</td><td class="${r[4]==='수익'?'up':'down'}">${r[4]}</td><td>${Math.round(Number(r[5])).toLocaleString()}원</td><td>${act(r[0], '실현손익')}</td></tr>`).join('');
+    renderPagination('realized-pagination', 'realized', currentData.realizedPLs.length);
+  }
+
+  function divYearChanged(val) {
+    if(val) selectedDivYear = val; else selectedDivYear = document.getElementById('div-year-select').value;
+    if(document.getElementById('div-year-select')) document.getElementById('div-year-select').value = selectedDivYear;
+    if(document.getElementById('div-year-select-2')) document.getElementById('div-year-select-2').value = selectedDivYear;
+    renderDivSummary(); 
+  }
+
+  function renderDivSummary() {
+    const select1 = document.getElementById('div-year-select'); const select2 = document.getElementById('div-year-select-2');
+    const years = new Set(currentData.dividends.map(r => new Date(r[2]).getFullYear().toString()).filter(y => y !== "NaN"));
+    years.add(new Date().getFullYear().toString()); const sortedYears = Array.from(years).sort().reverse();
+    if (!years.has(selectedDivYear)) selectedDivYear = new Date().getFullYear().toString();
+    const options = sortedYears.map(y => `<option value="${y}" ${y === selectedDivYear ? 'selected' : ''}>${y}년</option>`).join('');
+    if(select1) select1.innerHTML = options; if(select2) select2.innerHTML = options;
+    const filteredDivs = currentData.dividends.filter(r => new Date(r[2]).getFullYear().toString() === selectedDivYear);
+    
+    let monthlyDivs = Array(12).fill(0);
+    filteredDivs.forEach(r => { const d = new Date(r[2]); if (!isNaN(d)) monthlyDivs[d.getMonth()] += (Number(r[4]) || 0); });
+    const sumBody = document.getElementById('monthly-div-sum-body');
+    if(sumBody) sumBody.innerHTML = "<tr>" + monthlyDivs.map(v => `<td style="font-weight:700;">${v > 0 ? Math.round(v).toLocaleString()+'원' : '0원'}</td>`).join('') + "</tr>";
+
+    const summaryMap = {};
+    filteredDivs.forEach(r => {
+      const symbol = r[3], amt = Number(r[4]) || 0;
+      if (!summaryMap[symbol]) summaryMap[symbol] = { total: 0, count: 0, months: Array(12).fill(false) };
+      summaryMap[symbol].total += amt; summaryMap[symbol].count += 1;
+      const d = new Date(r[2]); if (!isNaN(d)) summaryMap[symbol].months[d.getMonth()] = true;
+    });
+    const summaryArr = Object.entries(summaryMap).sort((a,b) => b[1].total - a[1].total);
+    
+    document.getElementById('div-summary-table-body').innerHTML = summaryArr.map(([symbol, data]) => {
+      const badges = data.months.map((active, i) => `<span class="month-badge ${active?'active':''}">${i+1}월</span>`).join('');
+      return `<tr><td class="sticky-col" style="font-weight:700; color:#1a202c;">${symbol}</td><td style="font-weight:700;">${Math.round(data.total).toLocaleString()}원</td><td><div style="display:flex; align-items:center; gap:12px;"><div class="month-badge-container">${badges}</div><span style="font-size:13px; font-weight:700; color:var(--text-sub);">연 ${data.count}회</span></div></td></tr>`;
+    }).join('');
+  }
+
+  function renderRecords() {
+    const tradeData = currentData.transactions.filter(r => r[3]!=='입금').reverse();
+    const tStart = pageState.trade * itemsPerPage;
+    document.getElementById('trade-body').innerHTML = tradeData.slice(tStart, tStart+itemsPerPage).map(r => `<tr><td>${r[2]}</td><td class="${r[3]==='매수'?'up':'down'}">${r[3]}</td><td>${r[4]}</td><td class="sticky-col">${r[5]}</td><td>${Number(r[6]).toLocaleString()}</td><td>${r[7]}</td><td>${Number(r[8]).toLocaleString()}</td><td>${act(r[0], '거래')}</td></tr>`).join('');
+    renderPagination('trade-pagination', 'trade', tradeData.length);
+    
+    const depositData = currentData.transactions.filter(r => r[3]==='입금').reverse();
+    const depStart = pageState.deposit * itemsPerPage;
+    document.getElementById('deposit-body').innerHTML = depositData.slice(depStart, depStart+itemsPerPage).map(r => `<tr><td>${r[2]}</td><td>${r[4]}</td><td style="font-weight:700;">${Number(r[8]).toLocaleString()}원</td><td>${r[5]}</td><td>${act(r[0], '입금')}</td></tr>`).join('');
+    renderPagination('deposit-pagination', 'deposit', depositData.length);
+
+    const divData = currentData.dividends.slice().reverse();
+    const dStart = pageState.divDetail * itemsPerPage;
+    document.getElementById('dividend-body').innerHTML = divData.slice(dStart, dStart+itemsPerPage).map(r => `<tr><td>${r[2]}</td><td class="sticky-col" style="font-weight:700">${r[3]}</td><td style="font-weight:700">${Number(r[4]).toLocaleString()}원</td><td>${r[5]}</td><td>${Math.round(Number(r[6])).toLocaleString()}원</td><td>${act(r[0], '배당')}</td></tr>`).join('');
+    renderPagination('div-detail-pagination', 'divDetail', divData.length);
+  }
+
+  function renderAssetGoals() {
+    let sumSalary = 0, sumFixed = 0, sumSaving = 0, sumInvest = 0;
+    currentData.goals.forEach(g => {
+      const type = g[2], amt = Number(g[4]) || 0;
+      if (type === '월급') sumSalary += amt; else if (type === '고정지출') sumFixed += amt; else if (type === '적금') sumSaving += amt; else if (type === '투자') sumInvest += amt;
+    });
+    const sumSpare = sumSalary - sumFixed - sumSaving - sumInvest;
+    document.getElementById('ag-sum-salary').innerText = Math.round(sumSalary).toLocaleString() + "원";
+    document.getElementById('ag-sum-fixed').innerText = Math.round(sumFixed).toLocaleString() + "원";
+    document.getElementById('ag-sum-saving').innerText = Math.round(sumSaving).toLocaleString() + "원";
+    document.getElementById('ag-sum-invest').innerText = Math.round(sumInvest).toLocaleString() + "원";
+    document.getElementById('ag-sum-spare').innerText = Math.round(sumSpare).toLocaleString() + "원";
+
+    const start = pageState.asset * itemsPerPage;
+    const paginated = currentData.goals.slice().reverse().slice(start, start + itemsPerPage);
+    document.getElementById('asset-goal-body').innerHTML = paginated.map(g => `<tr><td>${g[2]}</td><td class="sticky-col" style="font-weight:700;">${g[3]}</td><td style="font-weight:700;">${Number(g[4]).toLocaleString()}원</td><td style="color:var(--text-sub); font-size:12px;">${g[5] || ''}</td><td>${act(g[0], '자산목표')}</td></tr>`).join('');
+    renderPagination('asset-pagination', 'asset', currentData.goals.length);
+  }
+
+  function renderDashboard() {
+    const s = currentData.summary; 
+    document.getElementById('dash-total-amount').innerText = Math.round(s.evaluationAmount).toLocaleString() + "원";
+    const tag = document.getElementById('dash-profit-tag'); const sign = s.unrealizedProfit > 0 ? "+" : "";
+    tag.innerText = `(${sign}${Math.round(s.unrealizedProfit).toLocaleString()}원 ${sign}${s.unrealizedRate.toFixed(2)}%)`; 
+    tag.className = (s.unrealizedProfit >= 0 ? "up" : "down");
+    document.getElementById('dash-sub-deposit').innerText = Math.round(s.totalDeposit).toLocaleString() + "원";
+    document.getElementById('dash-sub-dividend').innerText = Math.round(s.dividendTotal).toLocaleString() + "원";
+    document.getElementById('dash-sub-realized').innerText = Math.round(s.realizedProfit).toLocaleString() + "원";
+    
+    let assetGroups = { '현금': s.cashBalance };
+    currentData.holdings.forEach(h => { if(h.asset !== 'RP') { assetGroups[h.asset] = (assetGroups[h.asset] || 0) + (h.avgPrice * h.qty); } });
+    
+    const bar = document.getElementById('dash-asset-bar'); bar.innerHTML = ""; const assetTbody = document.querySelector('#dash-asset-table tbody'); assetTbody.innerHTML = "";
+    Object.keys(assetGroups).sort((a,b) => assetGroups[b] - assetColors[a]).forEach(cat => {
+      if(assetGroups[cat] <= 0) return; const pct = (assetGroups[cat]/s.evaluationAmount*100);
+      bar.insertAdjacentHTML('beforeend', `<div style="width:${pct}%; background:${assetColors[cat]||'#cbd5e0'}" onclick="filterStockDetail('${cat}', ${assetGroups[cat]})"></div>`);
+      assetTbody.insertAdjacentHTML('beforeend', `<tr onclick="filterStockDetail('${cat}', ${assetGroups[cat]})" style="cursor:pointer;"><td><span style="color:${assetColors[cat]}">●</span> ${cat}</td><td>${Math.round(assetGroups[cat]).toLocaleString()}원</td><td>${pct.toFixed(1)}%</td></tr>`);
+    });
+    filterStockDetail('전체', s.evaluationAmount);
+  }
+
+  function filterStockDetail(cat, groupTotal) {
+    const tbody = document.querySelector('#dash-stock-table tbody'); 
+    document.getElementById('detail-title').innerText = `종목 상세 (${cat})`;
+    let list = [];
+    if (cat === '현금') {
+      list.push({ s: '현금 잔고', v: currentData.summary.cashBalance });
+      currentData.holdings.filter(h => h.asset === '현금' || h.asset === 'RP').forEach(h => list.push({ s: h.symbol, v: h.avgPrice * h.qty }));
+      groupTotal = list.reduce((sum, item) => sum + item.v, 0); 
+    } else if (cat === '전체') {
+      list.push({ s: '현금 잔고', v: currentData.summary.cashBalance });
+      currentData.holdings.filter(h => h.asset !== 'RP').forEach(h => list.push({ s: h.symbol, v: h.avgPrice * h.qty }));
+      groupTotal = currentData.summary.evaluationAmount; 
+    } else {
+      currentData.holdings.filter(h => h.asset === cat).forEach(h => list.push({ s: h.symbol, v: h.avgPrice * h.qty }));
+    }
+    tbody.innerHTML = list.sort((a,b) => b.v - a.v).map(i => `<tr><td class="sticky-col">${i.s}</td><td>${Math.round(i.v).toLocaleString()}원</td><td>${(i.v/(groupTotal||1)*100).toFixed(1)}%</td></tr>`).join('');
+  }
+
+  function showTooltip(e, content) { const tip = document.getElementById('tooltip-box'); tip.innerHTML = content; tip.style.display = 'block'; tip.style.left = (e.pageX + 15) + 'px'; tip.style.top = (e.pageY + 15) + 'px'; }
+  function hideTooltip() { document.getElementById('tooltip-box').style.display = 'none'; }
+  function switchPage(page) { ['dashboard', 'detail', 'all-accounts'].forEach(p => document.getElementById('page-' + p).classList.toggle('hidden', p !== page)); document.getElementById('profile-dropdown').classList.add('hidden'); }
+
+  function changeTab(tab, btn) { 
+    ['holdings', 'trade', 'deposit', 'dividend', 'assets'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab)); 
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+    if(btn) btn.classList.add('active'); 
+    if (tab === 'dividend') { selectedDivYear = new Date().getFullYear().toString(); pageState.divDetail = 0; renderDivSummary(); renderRecords(); }
+  }
+
+  // --- 여기서부터 Firebase DB 쓰기/수정/삭제 로직 ---
+  function openRealizedModal() { document.getElementById('realized-modal').style.display = 'flex'; }
+  function closeRealizedModal() { editingId = null; document.getElementById('realized-modal').style.display = 'none'; document.getElementById('rl-symbol').value = ''; document.getElementById('rl-amount').value = ''; }
+  
+  async function submitRealized() { 
+    showLoading();
+    const docId = editingId || new Date().getTime().toString();
+    const data = { "ID": docId, "계좌명": currentProfile, "날짜": new Date().toISOString().substring(0,10), "종목명": document.getElementById('rl-symbol').value, "구분": document.getElementById('rl-type').value, "금액": Number(document.getElementById('rl-amount').value) };
+    
+    const q = await db.collection("RealizedPL").where("ID", "==", docId).get();
+    if (!q.empty) await db.collection("RealizedPL").doc(q.docs[0].id).update(data);
+    else await db.collection("RealizedPL").add(data);
+    
+    closeRealizedModal(); await refreshData();
+  }
+
+  function closeEditModal() { editingId = null; document.getElementById('edit-modal').style.display = 'none'; }
+  
+  async function submitEdit() {
+    showLoading();
+    let d = { profileName: currentProfile, id: editingId };
+    if (editingType === '거래') { d.mainType = document.getElementById('em-type').value; d.date = document.getElementById('em-date').value; d.assetType = document.getElementById('em-asset').value; d.symbol = document.getElementById('em-symbol').value; d.price = Number(document.getElementById('em-price').value); d.qty = Number(document.getElementById('em-qty').value); d.amount = d.price * d.qty; }
+    else if (editingType === '입금') { d.mainType = '입금'; d.date = document.getElementById('em-date').value; d.assetType = document.getElementById('em-type').value; d.amount = Number(document.getElementById('em-amount').value); d.note = document.getElementById('em-note').value; d.symbol = d.note; d.price = d.amount; d.qty = 1; }
+    else if (editingType === '배당') { d.mainType = '배당'; d.date = document.getElementById('em-date').value; d.symbol = document.getElementById('em-symbol').value; d.qty = Number(document.getElementById('em-qty').value); d.amount = Number(document.getElementById('em-amount').value); d.perShare = d.amount / d.qty; }
+    else if (editingType === '자산목표') { d.mainType = '자산목표'; d.type = document.getElementById('em-type').value; d.item = document.getElementById('em-item').value; d.amount = Number(document.getElementById('em-amount').value); d.note = document.getElementById('em-note').value; }
+    
+    await saveRecordDB(d);
+    closeEditModal(); await refreshData();
+  }
+
+  function editRec(id, type) {
+    editingId = id; editingType = type;
+    const body = document.getElementById('edit-modal-body');
+    document.getElementById('edit-modal-title').innerText = type + ' 수정';
+    let html = '';
+
+    if (type === '거래') {
+      const r = currentData.transactions.find(x => x[0].toString() === id.toString());
+      html = `<input type="date" id="em-date" class="input-box" value="${r[2]}"><select id="em-type" class="input-box"><option value="매수" ${r[3]==='매수'?'selected':''}>매수</option><option value="매도" ${r[3]==='매도'?'selected':''}>매도</option></select><select id="em-asset" class="input-box"><option value="해외주식" ${r[4]==='해외주식'?'selected':''}>해외주식</option><option value="국내주식" ${r[4]==='국내주식'?'selected':''}>국내주식</option><option value="채권" ${r[4]==='채권'?'selected':''}>채권</option><option value="RP" ${r[4]==='RP'?'selected':''}>RP</option><option value="현금" ${r[4]==='현금'?'selected':''}>현금</option><option value="금" ${r[4]==='금'?'selected':''}>금</option><option value="리츠" ${r[4]==='리츠'?'selected':''}>리츠</option><option value="기타" ${r[4]==='기타'?'selected':''}>기타</option></select><input type="text" id="em-symbol" class="input-box" value="${r[5]}" placeholder="종목명"><input type="number" id="em-price" class="input-box" value="${r[6]}" placeholder="단가"><input type="number" id="em-qty" class="input-box" value="${r[7]}" placeholder="수량">`;
+      body.innerHTML = html; document.getElementById('edit-modal').style.display = 'flex';
+    } else if (type === '입금') {
+      const r = currentData.transactions.find(x => x[0].toString() === id.toString());
+      html = `<input type="date" id="em-date" class="input-box" value="${r[2]}"><select id="em-type" class="input-box"><option value="여유금" ${r[4]==='여유금'?'selected':''}>여유금</option><option value="월급" ${r[4]==='월급'?'selected':''}>월급</option><option value="기타" ${r[4]==='기타'?'selected':''}>기타</option></select><input type="number" id="em-amount" class="input-box" value="${r[8]}" placeholder="금액"><input type="text" id="em-note" class="input-box" value="${r[5]}" placeholder="비고">`;
+      body.innerHTML = html; document.getElementById('edit-modal').style.display = 'flex';
+    } else if (type === '배당') {
+      const r = currentData.dividends.find(x => x[0].toString() === id.toString());
+      html = `<input type="date" id="em-date" class="input-box" value="${r[2]}"><input type="text" id="em-symbol" class="input-box" value="${r[3]}" placeholder="종목명"><input type="number" id="em-amount" class="input-box" value="${r[4]}" placeholder="총 배당금"><input type="number" id="em-qty" class="input-box" value="${r[5]}" placeholder="보유수량">`;
+      body.innerHTML = html; document.getElementById('edit-modal').style.display = 'flex';
+    } else if (type === '자산목표') {
+      const r = currentData.goals.find(x => x[0].toString() === id.toString());
+      html = `<select id="em-type" class="input-box"><option value="월급" ${r[2]==='월급'?'selected':''}>월급</option><option value="고정지출" ${r[2]==='고정지출'?'selected':''}>고정지출</option><option value="유동지출" ${r[2]==='유동지출'?'selected':''}>유동지출</option><option value="적금" ${r[2]==='적금'?'selected':''}>적금</option><option value="투자" ${r[2]==='투자'?'selected':''}>투자</option></select><input type="text" id="em-item" class="input-box" value="${r[3]}" placeholder="항목명"><input type="number" id="em-amount" class="input-box" value="${r[4]}" placeholder="금액"><input type="text" id="em-note" class="input-box" value="${r[5] || ''}" placeholder="비고">`;
+      body.innerHTML = html; document.getElementById('edit-modal').style.display = 'flex';
+    } else if (type === '실현손익') {
+      const r = currentData.realizedPLs.find(x => x[0].toString() === id.toString());
+      document.getElementById('rl-symbol').value = r[3]; document.getElementById('rl-type').value = r[4]; document.getElementById('rl-amount').value = r[5];
+      openRealizedModal();
+    }
+  }
+
+  async function manualPricePrompt(symbol) { 
+    const p = prompt(`${symbol} 현재가 입력:`); 
+    if(p && !isNaN(p)) {
+      showLoading();
+      const q = await db.collection("CurrentPrices").where("계좌명", "==", currentProfile).where("종목명", "==", symbol).get();
+      if (!q.empty) await db.collection("CurrentPrices").doc(q.docs[0].id).update({"현재가": Number(p), "수정일": new Date().toISOString()});
+      else await db.collection("CurrentPrices").add({"계좌명": currentProfile, "종목명": symbol, "티커": "", "현재가": Number(p), "수정일": new Date().toISOString()});
+      await refreshData();
+    } 
+  }
+  
+  async function saveTicker(s, t) { 
+    const q = await db.collection("CurrentPrices").where("계좌명", "==", currentProfile).where("종목명", "==", s).get();
+    if (!q.empty) await db.collection("CurrentPrices").doc(q.docs[0].id).update({"티커": "'" + t});
+    else await db.collection("CurrentPrices").add({"계좌명": currentProfile, "종목명": s, "티커": "'" + t, "현재가": 0, "수정일": new Date().toISOString()});
+  }
+
+  // 우회 서버를 통한 네이버 주식 현재가 크롤링 (CORS 해결)
+  async function syncPrices() { 
+    alert("현재가 업데이트를 시작합니다. (한국 주식 전용. 소요 시간 약 10초)");
+    showLoading();
+    const pData = rawStore.CurrentPrices.filter(r => r["계좌명"] === currentProfile);
+    for (const item of pData) {
+      if (!item["티커"]) continue;
+      let pureTicker = item["티커"].replace(/'/g, "").trim();
+      if (pureTicker.includes(':')) pureTicker = pureTicker.split(':')[1].trim();
+
+      if (/[a-zA-Z]/.test(pureTicker) && pureTicker.length === 6) {
+        try {
+          const proxy = "https://api.allorigins.win/get?url=";
+          const target = encodeURIComponent(`https://m.stock.naver.com/api/stock/${pureTicker}/basic`);
+          const res = await fetch(proxy + target);
+          const data = await res.json();
+          const match = data.contents.match(/"closePrice"\s*:\s*"([\d,]+)"/);
+          if (match && match[1]) {
+            const price = Number(match[1].replace(/,/g, ''));
+            const q = await db.collection("CurrentPrices").where("계좌명", "==", currentProfile).where("종목명", "==", item["종목명"]).get();
+            if (!q.empty) await db.collection("CurrentPrices").doc(q.docs[0].id).update({"현재가": price});
+          }
+        } catch(e) { console.error(e); }
+      }
+    }
+    await refreshData();
+    alert("업데이트 완료!"); 
+  }
+
+  async function del(id, type) { 
+    if(confirm("정말 삭제하시겠습니까?")) {
+      showLoading();
+      const sheetName = (type === '배당') ? "Dividends" : (type === '자산목표') ? "MonthlyGoals" : (type === '실현손익') ? "RealizedPL" : "Transactions";
+      const q = await db.collection(sheetName).where("ID", "==", id.toString()).get();
+      for (const doc of q.docs) await db.collection(sheetName).doc(doc.id).delete();
+      await refreshData();
+    }
+  }
+  
+  async function addNewProfilePrompt() { 
+    const n = prompt("이름:"); 
+    if(n) {
+      showLoading();
+      const randomColor = profileColors[Math.floor(Math.random() * profileColors.length)];
+      await db.collection("Accounts").add({ "ID": new Date().getTime().toString(), "프로필명": n, "색상": randomColor, "생성일": new Date().toISOString() });
+      await initFirebaseData();
+      hideLoading();
+    }
+  }
+  
+  function handleTitleClick() { if (currentProfile) switchPage('dashboard'); else viewAllAccounts(); }
+  function goHome() { location.reload(); }
+  function toggleDropdown(e) { e.stopPropagation(); document.getElementById('profile-dropdown').classList.toggle('hidden'); }
+  
+  async function saveRecordDB(d) {
+    const sheetName = (d.mainType === '배당') ? "Dividends" : (d.mainType === '자산목표') ? "MonthlyGoals" : "Transactions";
+    const docId = d.id || new Date().getTime().toString();
+    
+    let data = {};
+    if (d.mainType === '배당') {
+      data = { "ID": docId, "계좌명": d.profileName, "날짜": d.date, "종목명": d.symbol, "배당금": Number(d.amount), "보유수량": Number(d.qty), "주당배당금": Number(d.perShare) };
+    } else if (d.mainType === '자산목표') {
+      data = { "ID": docId, "계좌명": d.profileName, "유형": d.type, "항목명": d.item, "금액": Number(d.amount), "비고": d.note || '' };
+    } else {
+      data = { "ID": docId, "계좌명": d.profileName, "날짜": d.date, "구분": d.mainType, "자산유형": d.assetType, "종목명": d.symbol, "단가": Number(d.price), "수량": Number(d.qty), "금액": Number(d.amount), "비고": d.note || '' };
+    }
+
+    const q = await db.collection(sheetName).where("ID", "==", docId).get();
+    if (!q.empty) await db.collection(sheetName).doc(q.docs[0].id).update(data);
+    else await db.collection(sheetName).add(data);
+
+    if (d.mainType === '매도' && d.realizedProfit !== undefined && !d.id) {
+      const rData = { "ID": docId + "_R", "계좌명": d.profileName, "날짜": d.date, "종목명": d.symbol, "구분": d.realizedProfit >= 0 ? '수익' : '손실', "금액": Math.abs(d.realizedProfit) };
+      await db.collection("RealizedPL").add(rData);
+    }
+  }
+
+  async function saveData(m) {
+    showLoading();
+    let d = { profileName: currentProfile }; 
+    if (m === 'trade') { 
+      d.mainType = document.getElementById('t-type').value; d.date = document.getElementById('t-date').value; d.assetType = document.getElementById('t-asset').value; d.symbol = document.getElementById('t-symbol').value; d.price = Number(document.getElementById('t-price').value); d.qty = Number(document.getElementById('t-qty').value); d.amount = d.price * d.qty; 
+      if (d.mainType === '매도') {
+        const holding = currentData.holdings.find(h => h.symbol === d.symbol);
+        const avgPrice = holding ? holding.avgPrice : 0;
+        d.realizedProfit = Math.round((d.price - avgPrice) * d.qty);
+      }
+    }
+    else if (m === 'deposit') { d.mainType = '입금'; d.date = document.getElementById('d-date').value; d.assetType = document.getElementById('d-type').value; d.amount = Number(document.getElementById('d-amount').value); d.note = document.getElementById('d-note').value; d.symbol = d.note; d.price = d.amount; d.qty = 1; }
+    else if (m === 'dividend') { d.mainType = '배당'; d.date = document.getElementById('dv-date').value; d.symbol = document.getElementById('dv-symbol').value; d.qty = Number(document.getElementById('dv-qty').value); d.amount = Number(document.getElementById('dv-amount').value); d.perShare = d.amount / d.qty; }
+    else if (m === 'asset-goal') { d.mainType = '자산목표'; d.type = document.getElementById('ag-type').value; d.item = document.getElementById('ag-item').value; d.amount = Number(document.getElementById('ag-amount').value); d.note = document.getElementById('ag-note').value; }
+    
+    await saveRecordDB(d);
+    
+    if(m==='asset-goal'){ document.getElementById('ag-item').value=''; document.getElementById('ag-amount').value=''; document.getElementById('ag-note').value=''; } 
+    await refreshData();
   }
 </script>
 </body>
