@@ -11,7 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* 사용자님의 오리지널 CSS 완벽 복구 */
+    /* 오리지널 디자인 완벽 복원 */
     :root { --primary: #2883D7; --point-red: #EE5D50; --bg: #f5f7fb; --card: #ffffff; --text: #1a202c; --text-sub: #718096; --border: #e2e8f0; --up: #e53e3e; --down: #3182ce; --dark-box: #1a1b1e; }
     body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; overflow-x: hidden; }
     .hidden { display: none !important; }
@@ -92,7 +92,10 @@
     .sticky-col { position: sticky; left: 0; z-index: 2; border-right: 1px solid #edf2f7; }
     th.sticky-col { background-color: #f7fafc !important; z-index: 3; }
     td.sticky-col { background-color: #ffffff !important; }
-    .sticky-col::after { content: ''; position: absolute; top: 0; bottom: 0; right: -5px; width: 5px; background: linear-gradient(to right, rgba(0,0,0,0.04), transparent); pointer-events: none; }
+    .sticky-col::after {
+      content: ''; position: absolute; top: 0; bottom: 0; right: -5px; width: 5px;
+      background: linear-gradient(to right, rgba(0,0,0,0.04), transparent); pointer-events: none;
+    }
 
     .input-box { height: 48px; width: 100%; padding: 0 15px; border: 1px solid #cbd5e0; border-radius: 10px; box-sizing: border-box; font-size: 14px; outline: none; margin-bottom: 12px; }
 
@@ -112,40 +115,31 @@
       .dash-sub-info { gap: 10px !important; }
       .sub-info-item { font-size: 11px !important; }
       .sub-info-item b { font-size: 14px !important; margin-top: 2px !important; }
-
       .all-accounts-grid { grid-template-columns: 1fr !important; }
       .acc-eval-val { font-size: 20px !important; margin-bottom: 10px !important; }
       .profile-container { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
       .modal-content { width: 90%; padding: 20px; }
-
       .card-header-flex { flex-direction: column; align-items: stretch !important; gap: 10px; }
       .card-header-flex button { width: 100%; padding: 12px 0 !important; font-size: 14px; }
-
       .tab-bar { flex-wrap: wrap; gap: 10px; border-bottom: none; }
       .tab-btn { font-size: 14px; padding: 8px 5px; }
       .btn-go-dash { width: 100%; text-align: left; padding: 10px 5px; border-top: 1px solid var(--border); margin-top: 5px; font-size: 13px; }
-
       .summary-banner { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; padding: 20px !important; }
       .banner-item::after { display: none !important; } 
       .banner-item { padding: 0 !important; }
       .banner-item h4 { font-size: 11px !important; }
       .banner-item p { font-size: 16px !important; }
       #b-eval-profit { font-size: 11px !important; }
-      
       .banner-item:nth-child(1) { order: 1; }
       .banner-item:nth-child(4) { order: 2; }
       .banner-item:nth-child(2) { order: 3; }
       .banner-item:nth-child(3) { order: 4; }
-
       .goal-banner-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; }
       .goal-banner-grid .banner-item::after { display: none !important; }
-
       .mobile-stack { grid-template-columns: 1fr !important; gap: 10px !important; }
       .btn-record { height: 44px; font-size: 14px; margin-top: 5px; }
-
       th, td { padding: 8px 8px; font-size: 12px; }
       #monthly-div-sum-table { min-width: 500px; }
-
       .pagination { flex-wrap: wrap; gap: 5px; }
       .page-btn { min-width: 32px; height: 32px; font-size: 12px; }
     }
@@ -162,7 +156,7 @@
 <div id="tooltip-box" class="custom-tooltip"></div>
 
 <div id="loading-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:99999; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; color:var(--primary);">
-  DB를 불러오는 중입니다...
+  서버와 동기화 중입니다... 잠시만 기다려주세요!
 </div>
 
 <div id="view-home" class="hidden">
@@ -411,10 +405,10 @@
 
 <script>
   // ============================================================
-  // 1. 보안 설정: 접속 시 암호 (원하는 비밀번호로 바꾸세요)
+  // 1. 보안 설정: 본인만의 비밀번호
   const MY_PASSWORD = "ditlzhdw1"; 
 
-  // 2. Firebase 설정 정보
+  // 2. 파이어베이스 설정
   const firebaseConfig = {
     apiKey: "AIzaSyATpDddpWHvYTTLnKVq62Dp0ft4SPQhf7E",
     authDomain: "asset-c8259.firebaseapp.com",
@@ -424,7 +418,6 @@
     appId: "1:123001838654:web:6ba8d1f382c4ad6853c56f"
   };
 
-  // Firebase 초기화
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
   // ============================================================
@@ -438,7 +431,7 @@
 
   let currentProfile = "";
   let currentData = { holdings: [], summary: {}, transactions: [], dividends: [], realizedPLs: [], goals: [], monthlyDivs: [] };
-  let rawStore = {}; // 파이어베이스 원본 데이터 임시 저장소
+  let rawStore = {}; 
   let editingId = null; let editingType = ''; 
   const itemsPerPage = 10;
   const pageState = { trade: 0, deposit: 0, divDetail: 0, asset: 0, realized: 0 }; 
@@ -456,37 +449,45 @@
     document.getElementById('view-home').classList.remove('hidden');
   };
 
-  // [핵심] 파이어베이스 데이터를 통째로 불러와서 기존 구글 시트 배열 방식으로 변환하는 어댑터!
   async function initFirebaseData() {
     const cols = ["Accounts", "Transactions", "Dividends", "MonthlyGoals", "RealizedPL", "CurrentPrices"];
     for(let c of cols) {
       const snap = await db.collection(c).get();
       rawStore[c] = snap.docs.map(doc => doc.data());
     }
-    const profiles = (rawStore.Accounts || []).map(p => ({ id: p["ID"], name: p["프로필명"], color: p["색상"] }));
+    const profiles = (rawStore.Accounts || []).map(p => ({ 
+      id: p["ID"] || p["ID "], 
+      name: p["프로필명"] || p["프로필명 "], 
+      color: p["색상"] || p["색상 "] 
+    }));
     renderProfileSelection(profiles);
     renderDropdownProfiles(profiles);
   }
 
+  // 띄어쓰기 오류까지 무시하고 데이터를 뽑아주는 무적의 어댑터
   function getAccountFullDataLocal(profileName) {
-    const toArray = (arr, mapKeys) => (arr||[]).map(obj => mapKeys.map(k => obj[k] !== undefined ? obj[k] : ''));
+    const toArray = (arr, mapKeys) => (arr||[]).map(obj => mapKeys.map(k => {
+      const safeKey = Object.keys(obj).find(key => key.trim() === k.trim());
+      return safeKey && obj[safeKey] !== undefined ? obj[safeKey] : '';
+    }));
     
-    // 파이어베이스 JSON -> 구글 시트 2D 배열로 매핑
     const transData = toArray(rawStore.Transactions, ["ID", "계좌명", "날짜", "구분", "자산유형", "종목명", "단가", "수량", "금액", "비고"]);
     const divData = toArray(rawStore.Dividends, ["ID", "계좌명", "날짜", "종목명", "배당금", "보유수량", "주당배당금"]);
     const realData = toArray(rawStore.RealizedPL, ["ID", "계좌명", "날짜", "종목명", "구분", "금액"]);
     const goalData = toArray(rawStore.MonthlyGoals, ["ID", "계좌명", "유형", "항목명", "금액", "비고"]);
     const priceData = toArray(rawStore.CurrentPrices, ["계좌명", "종목명", "티커", "현재가", "수정일"]);
 
-    const profileTrans = transData.filter(r => r[1] === profileName);
-    const profileDivs = divData.filter(r => r[1] === profileName);
-    const profileReals = realData.filter(r => r[1] === profileName);
-    const profileGoals = goalData.filter(r => r[1] === profileName);
+    // 이름의 공백으로 인한 버그 완벽 차단
+    const pn = String(profileName).trim();
+    const profileTrans = transData.filter(r => String(r[1]).trim() === pn);
+    const profileDivs = divData.filter(r => String(r[1]).trim() === pn);
+    const profileReals = realData.filter(r => String(r[1]).trim() === pn);
+    const profileGoals = goalData.filter(r => String(r[1]).trim() === pn);
 
     const holdings = {};
     let totalDeposit = 0, cashBalance = 0; 
     profileTrans.forEach(r => {
-      const type = r[3], cat = r[4], symbol = r[5], qty = Number(r[7]) || 0, amount = Number(r[8]) || 0;
+      const type = String(r[3]).trim(), cat = r[4], symbol = r[5], qty = Number(r[7]) || 0, amount = Number(r[8]) || 0;
       if (type === '입금') { totalDeposit += amount; cashBalance += amount; }
       else if (type === '매수') {
         if (!holdings[symbol]) holdings[symbol] = { asset: cat, symbol, qty: 0, totalCost: 0, avgPrice: 0 };
@@ -508,12 +509,12 @@
 
     let realizedProfitTotal = 0;
     profileReals.forEach(r => { 
-      const amt = (r[4] === '수익' ? Number(r[5]) : -Number(r[5]));
+      const amt = (String(r[4]).trim() === '수익' ? Number(r[5]) : -Number(r[5]));
       realizedProfitTotal += amt;
     });
 
     const priceMap = {};
-    priceData.forEach(row => { if (row[0] === profileName) priceMap[row[1]] = { ticker: row[2].toString(), price: row[3] }; });
+    priceData.forEach(row => { if (String(row[0]).trim() === pn) priceMap[row[1]] = { ticker: String(row[2]), price: row[3] }; });
 
     let stockEvalTotal = 0, stockCostTotal = 0; 
     const finalHoldings = Object.values(holdings).filter(h => (h.qty || 0) > 0).map(h => {
@@ -537,7 +538,6 @@
     };
   }
 
-  // --- UI 로직 (사용자님의 기존 완벽한 코드 그대로 복사!) ---
   document.addEventListener('click', function(e) {
     const dropdown = document.getElementById('profile-dropdown');
     if (dropdown && !dropdown.classList.contains('hidden') && !e.target.closest('.nav-right')) dropdown.classList.add('hidden');
@@ -545,12 +545,12 @@
 
   function renderProfileSelection(profiles) {
     const list = document.getElementById('profile-list');
-    list.innerHTML = profiles.map(p => `<div class="profile-card-home" onclick="selectProfile('${p.name}', '${p.color}')"><div class="profile-box" style="background:${p.color}">${p.name[0]}</div><div style="font-weight:700; font-size:18px; color:var(--text);">${p.name}</div></div>`).join('') + `<div class="profile-card-home" onclick="addNewProfilePrompt()"><div class="profile-box" style="background:#edf2f7; border:2px dashed #cbd5e0; color:#aaa;">+</div><div style="color:#aaa;">추가</div></div>`;
+    list.innerHTML = profiles.map(p => `<div class="profile-card-home" onclick="selectProfile('${p.name}', '${p.color}')"><div class="profile-box" style="background:${p.color}">${p.name ? p.name[0] : '?'}</div><div style="font-weight:700; font-size:18px; color:var(--text);">${p.name}</div></div>`).join('') + `<div class="profile-card-home" onclick="addNewProfilePrompt()"><div class="profile-box" style="background:#edf2f7; border:2px dashed #cbd5e0; color:#aaa;">+</div><div style="color:#aaa;">추가</div></div>`;
   }
 
   function renderDropdownProfiles(profiles) {
     const list = document.getElementById('dropdown-profile-list');
-    list.innerHTML = profiles.map(p => `<div class="dropdown-item" style="display:flex; align-items:center; gap:10px;" onclick="selectProfile('${p.name}', '${p.color}')"><div style="width:24px; height:24px; border-radius:4px; background:${p.color}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">${p.name[0]}</div><div style="font-weight:500;">${p.name}</div></div>`).join('');
+    list.innerHTML = profiles.map(p => `<div class="dropdown-item" style="display:flex; align-items:center; gap:10px;" onclick="selectProfile('${p.name}', '${p.color}')"><div style="width:24px; height:24px; border-radius:4px; background:${p.color}; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">${p.name ? p.name[0] : '?'}</div><div style="font-weight:500;">${p.name}</div></div>`).join('');
   }
 
   function selectProfile(name, color) {
@@ -563,7 +563,9 @@
   function viewAllAccounts() {
     switchPage('all-accounts');
     const list = document.getElementById('all-accounts-list');
-    let profiles = (rawStore.Accounts||[]).map(r => r["프로필명"]);
+    
+    // Account 이름 찾기 (공백 무시)
+    let profiles = (rawStore.Accounts||[]).map(r => r["프로필명"] || r["프로필명 "]);
     let res = profiles.map(pName => {
       const accData = getAccountFullDataLocal(pName);
       return { name: pName, summary: accData.summary, holdings: accData.holdings };
@@ -605,6 +607,7 @@
     html += `<button class="page-btn arrow" onclick="moveGroup('${stateKey}', 1)" ${endGroup >= totalPages ? 'disabled' : ''}>&gt;</button>`;
     paginator.innerHTML = html;
   }
+  
   function setPage(key, page) { pageState[key] = page; renderHoldings(); renderRecords(); renderAssetGoals(); renderDivSummary(); }
   function moveGroup(key, dir) { pageState[key] = (Math.floor(pageState[key] / 10) + dir) * 10; setPage(key, pageState[key]); }
   const act = (id, type) => `<div style="display:flex; gap:8px; justify-content:flex-start;"><button class="btn-icon" onclick="editRec('${id}', '${type}')"><svg><use href="#icon-edit"/></svg></button><button class="btn-icon" onclick="del('${id}', '${type}')"><svg><use href="#icon-trash"/></svg></button></div>`;
@@ -669,12 +672,12 @@
   }
 
   function renderRecords() {
-    const tradeData = currentData.transactions.filter(r => r[3]!=='입금').reverse();
+    const tradeData = currentData.transactions.filter(r => String(r[3]).trim() !== '입금').reverse();
     const tStart = pageState.trade * itemsPerPage;
     document.getElementById('trade-body').innerHTML = tradeData.slice(tStart, tStart+itemsPerPage).map(r => `<tr><td>${r[2]}</td><td class="${r[3]==='매수'?'up':'down'}">${r[3]}</td><td>${r[4]}</td><td class="sticky-col">${r[5]}</td><td>${Number(r[6]).toLocaleString()}</td><td>${r[7]}</td><td>${Number(r[8]).toLocaleString()}</td><td>${act(r[0], '거래')}</td></tr>`).join('');
     renderPagination('trade-pagination', 'trade', tradeData.length);
     
-    const depositData = currentData.transactions.filter(r => r[3]==='입금').reverse();
+    const depositData = currentData.transactions.filter(r => String(r[3]).trim() === '입금').reverse();
     const depStart = pageState.deposit * itemsPerPage;
     document.getElementById('deposit-body').innerHTML = depositData.slice(depStart, depStart+itemsPerPage).map(r => `<tr><td>${r[2]}</td><td>${r[4]}</td><td style="font-weight:700;">${Number(r[8]).toLocaleString()}원</td><td>${r[5]}</td><td>${act(r[0], '입금')}</td></tr>`).join('');
     renderPagination('deposit-pagination', 'deposit', depositData.length);
@@ -688,7 +691,7 @@
   function renderAssetGoals() {
     let sumSalary = 0, sumFixed = 0, sumSaving = 0, sumInvest = 0;
     currentData.goals.forEach(g => {
-      const type = g[2], amt = Number(g[4]) || 0;
+      const type = String(g[2]).trim(), amt = Number(g[4]) || 0;
       if (type === '월급') sumSalary += amt; else if (type === '고정지출') sumFixed += amt; else if (type === '적금') sumSaving += amt; else if (type === '투자') sumInvest += amt;
     });
     const sumSpare = sumSalary - sumFixed - sumSaving - sumInvest;
@@ -755,7 +758,7 @@
     if (tab === 'dividend') { selectedDivYear = new Date().getFullYear().toString(); pageState.divDetail = 0; renderDivSummary(); renderRecords(); }
   }
 
-  // --- 여기서부터 Firebase DB 쓰기/수정/삭제 로직 ---
+  // --- Firebase 쓰기 로직 ---
   function openRealizedModal() { document.getElementById('realized-modal').style.display = 'flex'; }
   function closeRealizedModal() { editingId = null; document.getElementById('realized-modal').style.display = 'none'; document.getElementById('rl-symbol').value = ''; document.getElementById('rl-amount').value = ''; }
   
@@ -774,13 +777,11 @@
   function closeEditModal() { editingId = null; document.getElementById('edit-modal').style.display = 'none'; }
   
   async function submitEdit() {
-    showLoading();
     let d = { profileName: currentProfile, id: editingId };
     if (editingType === '거래') { d.mainType = document.getElementById('em-type').value; d.date = document.getElementById('em-date').value; d.assetType = document.getElementById('em-asset').value; d.symbol = document.getElementById('em-symbol').value; d.price = Number(document.getElementById('em-price').value); d.qty = Number(document.getElementById('em-qty').value); d.amount = d.price * d.qty; }
     else if (editingType === '입금') { d.mainType = '입금'; d.date = document.getElementById('em-date').value; d.assetType = document.getElementById('em-type').value; d.amount = Number(document.getElementById('em-amount').value); d.note = document.getElementById('em-note').value; d.symbol = d.note; d.price = d.amount; d.qty = 1; }
     else if (editingType === '배당') { d.mainType = '배당'; d.date = document.getElementById('em-date').value; d.symbol = document.getElementById('em-symbol').value; d.qty = Number(document.getElementById('em-qty').value); d.amount = Number(document.getElementById('em-amount').value); d.perShare = d.amount / d.qty; }
     else if (editingType === '자산목표') { d.mainType = '자산목표'; d.type = document.getElementById('em-type').value; d.item = document.getElementById('em-item').value; d.amount = Number(document.getElementById('em-amount').value); d.note = document.getElementById('em-note').value; }
-    
     await saveRecordDB(d);
     closeEditModal(); await refreshData();
   }
@@ -831,9 +832,8 @@
     else await db.collection("CurrentPrices").add({"계좌명": currentProfile, "종목명": s, "티커": "'" + t, "현재가": 0, "수정일": new Date().toISOString()});
   }
 
-  // 우회 서버를 통한 네이버 주식 현재가 크롤링 (CORS 해결)
   async function syncPrices() { 
-    alert("현재가 업데이트를 시작합니다. (한국 주식 전용. 소요 시간 약 10초)");
+    alert("현재가 업데이트를 시작합니다. (한국 주식 전용, 약 10초 소요)");
     showLoading();
     const pData = rawStore.CurrentPrices.filter(r => r["계좌명"] === currentProfile);
     for (const item of pData) {
@@ -843,9 +843,7 @@
 
       if (/[a-zA-Z]/.test(pureTicker) && pureTicker.length === 6) {
         try {
-          const proxy = "https://api.allorigins.win/get?url=";
-          const target = encodeURIComponent(`https://m.stock.naver.com/api/stock/${pureTicker}/basic`);
-          const res = await fetch(proxy + target);
+          const res = await fetch("https://api.allorigins.win/get?url=" + encodeURIComponent(`https://m.stock.naver.com/api/stock/${pureTicker}/basic`));
           const data = await res.json();
           const match = data.contents.match(/"closePrice"\s*:\s*"([\d,]+)"/);
           if (match && match[1]) {
@@ -853,11 +851,10 @@
             const q = await db.collection("CurrentPrices").where("계좌명", "==", currentProfile).where("종목명", "==", item["종목명"]).get();
             if (!q.empty) await db.collection("CurrentPrices").doc(q.docs[0].id).update({"현재가": price});
           }
-        } catch(e) { console.error(e); }
+        } catch(e) {}
       }
     }
-    await refreshData();
-    alert("업데이트 완료!"); 
+    await refreshData(); alert("업데이트 완료!"); 
   }
 
   async function del(id, type) { 
@@ -876,16 +873,15 @@
       showLoading();
       const randomColor = profileColors[Math.floor(Math.random() * profileColors.length)];
       await db.collection("Accounts").add({ "ID": new Date().getTime().toString(), "프로필명": n, "색상": randomColor, "생성일": new Date().toISOString() });
-      await initFirebaseData();
-      hideLoading();
+      await initFirebaseData(); hideLoading();
     }
   }
   
   function handleTitleClick() { if (currentProfile) switchPage('dashboard'); else viewAllAccounts(); }
   function goHome() { location.reload(); }
-  function toggleDropdown(e) { e.stopPropagation(); document.getElementById('profile-dropdown').classList.toggle('hidden'); }
   
   async function saveRecordDB(d) {
+    showLoading();
     const sheetName = (d.mainType === '배당') ? "Dividends" : (d.mainType === '자산목표') ? "MonthlyGoals" : "Transactions";
     const docId = d.id || new Date().getTime().toString();
     
@@ -909,7 +905,6 @@
   }
 
   async function saveData(m) {
-    showLoading();
     let d = { profileName: currentProfile }; 
     if (m === 'trade') { 
       d.mainType = document.getElementById('t-type').value; d.date = document.getElementById('t-date').value; d.assetType = document.getElementById('t-asset').value; d.symbol = document.getElementById('t-symbol').value; d.price = Number(document.getElementById('t-price').value); d.qty = Number(document.getElementById('t-qty').value); d.amount = d.price * d.qty; 
